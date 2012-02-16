@@ -81,6 +81,12 @@
 .equ    amxCodeSize,    116     @ memory size of the overlay or of the native code
 .equ    amx_reloc_size, 120     @ (JIT) required temporary buffer for relocations
 
+.ifdef THUMB2
+@ Cortex-M3 etc. requires that the lowest bit of jump address is 1 to indicate thumb mode.
+.equ call_offset, 1
+.else
+.equ call_offset, 0
+.endif
 
     .section    .rodata
     .align  2
@@ -88,190 +94,190 @@
     .type   amx_opcodelist, %object
 amx_opcodelist:
     @ core set
-    .word   .OP_NOP
-    .word   .OP_LOAD_PRI
-    .word   .OP_LOAD_ALT
-    .word   .OP_LOAD_S_PRI
-    .word   .OP_LOAD_S_ALT
-    .word   .OP_LREF_S_PRI
-    .word   .OP_LREF_S_ALT
-    .word   .OP_LOAD_I
-    .word   .OP_LODB_I
-    .word   .OP_CONST_PRI
-    .word   .OP_CONST_ALT
-    .word   .OP_ADDR_PRI
-    .word   .OP_ADDR_ALT
-    .word   .OP_STOR
-    .word   .OP_STOR_S
-    .word   .OP_SREF_S
-    .word   .OP_STOR_I
-    .word   .OP_STRB_I
-    .word   .OP_ALIGN_PRI
-    .word   .OP_LCTRL
-    .word   .OP_SCTRL
-    .word   .OP_XCHG
-    .word   .OP_PUSH_PRI
-    .word   .OP_PUSH_ALT
-    .word   .OP_PUSHR_PRI
-    .word   .OP_POP_PRI
-    .word   .OP_POP_ALT
-    .word   .OP_PICK
-    .word   .OP_STACK
-    .word   .OP_HEAP
-    .word   .OP_PROC
-    .word   .OP_RET
-    .word   .OP_RETN
-    .word   .OP_CALL
-    .word   .OP_JUMP
-    .word   .OP_JZER
-    .word   .OP_JNZ
-    .word   .OP_SHL
-    .word   .OP_SHR
-    .word   .OP_SSHR
-    .word   .OP_SHL_C_PRI
-    .word   .OP_SHL_C_ALT
-    .word   .OP_SMUL
-    .word   .OP_SDIV
-    .word   .OP_ADD
-    .word   .OP_SUB
-    .word   .OP_AND
-    .word   .OP_OR
-    .word   .OP_XOR
-    .word   .OP_NOT
-    .word   .OP_NEG
-    .word   .OP_INVERT
-    .word   .OP_EQ
-    .word   .OP_NEQ
-    .word   .OP_SLESS
-    .word   .OP_SLEQ
-    .word   .OP_SGRTR
-    .word   .OP_SGEQ
-    .word   .OP_INC_PRI
-    .word   .OP_INC_ALT
-    .word   .OP_INC_I
-    .word   .OP_DEC_PRI
-    .word   .OP_DEC_ALT
-    .word   .OP_DEC_I
-    .word   .OP_MOVS
-    .word   .OP_CMPS
-    .word   .OP_FILL
-    .word   .OP_HALT
-    .word   .OP_BOUNDS
-    .word   .OP_SYSREQ
-    .word   .OP_SWITCH
-    .word   .OP_SWAP_PRI
-    .word   .OP_SWAP_ALT
-    .word   .OP_BREAK
-    .word   .OP_CASETBL
+    .word   (.OP_NOP + call_offset)
+    .word   (.OP_LOAD_PRI + call_offset)
+    .word   (.OP_LOAD_ALT + call_offset)
+    .word   (.OP_LOAD_S_PRI + call_offset)
+    .word   (.OP_LOAD_S_ALT + call_offset)
+    .word   (.OP_LREF_S_PRI + call_offset)
+    .word   (.OP_LREF_S_ALT + call_offset)
+    .word   (.OP_LOAD_I + call_offset)
+    .word   (.OP_LODB_I + call_offset)
+    .word   (.OP_CONST_PRI + call_offset)
+    .word   (.OP_CONST_ALT + call_offset)
+    .word   (.OP_ADDR_PRI + call_offset)
+    .word   (.OP_ADDR_ALT + call_offset)
+    .word   (.OP_STOR + call_offset)
+    .word   (.OP_STOR_S + call_offset)
+    .word   (.OP_SREF_S + call_offset)
+    .word   (.OP_STOR_I + call_offset)
+    .word   (.OP_STRB_I + call_offset)
+    .word   (.OP_ALIGN_PRI + call_offset)
+    .word   (.OP_LCTRL + call_offset)
+    .word   (.OP_SCTRL + call_offset)
+    .word   (.OP_XCHG + call_offset)
+    .word   (.OP_PUSH_PRI + call_offset)
+    .word   (.OP_PUSH_ALT + call_offset)
+    .word   (.OP_PUSHR_PRI + call_offset)
+    .word   (.OP_POP_PRI + call_offset)
+    .word   (.OP_POP_ALT + call_offset)
+    .word   (.OP_PICK + call_offset)
+    .word   (.OP_STACK + call_offset)
+    .word   (.OP_HEAP + call_offset)
+    .word   (.OP_PROC + call_offset)
+    .word   (.OP_RET + call_offset)
+    .word   (.OP_RETN + call_offset)
+    .word   (.OP_CALL + call_offset)
+    .word   (.OP_JUMP + call_offset)
+    .word   (.OP_JZER + call_offset)
+    .word   (.OP_JNZ + call_offset)
+    .word   (.OP_SHL + call_offset)
+    .word   (.OP_SHR + call_offset)
+    .word   (.OP_SSHR + call_offset)
+    .word   (.OP_SHL_C_PRI + call_offset)
+    .word   (.OP_SHL_C_ALT + call_offset)
+    .word   (.OP_SMUL + call_offset)
+    .word   (.OP_SDIV + call_offset)
+    .word   (.OP_ADD + call_offset)
+    .word   (.OP_SUB + call_offset)
+    .word   (.OP_AND + call_offset)
+    .word   (.OP_OR + call_offset)
+    .word   (.OP_XOR + call_offset)
+    .word   (.OP_NOT + call_offset)
+    .word   (.OP_NEG + call_offset)
+    .word   (.OP_INVERT + call_offset)
+    .word   (.OP_EQ + call_offset)
+    .word   (.OP_NEQ + call_offset)
+    .word   (.OP_SLESS + call_offset)
+    .word   (.OP_SLEQ + call_offset)
+    .word   (.OP_SGRTR + call_offset)
+    .word   (.OP_SGEQ + call_offset)
+    .word   (.OP_INC_PRI + call_offset)
+    .word   (.OP_INC_ALT + call_offset)
+    .word   (.OP_INC_I + call_offset)
+    .word   (.OP_DEC_PRI + call_offset)
+    .word   (.OP_DEC_ALT + call_offset)
+    .word   (.OP_DEC_I + call_offset)
+    .word   (.OP_MOVS + call_offset)
+    .word   (.OP_CMPS + call_offset)
+    .word   (.OP_FILL + call_offset)
+    .word   (.OP_HALT + call_offset)
+    .word   (.OP_BOUNDS + call_offset)
+    .word   (.OP_SYSREQ + call_offset)
+    .word   (.OP_SWITCH + call_offset)
+    .word   (.OP_SWAP_PRI + call_offset)
+    .word   (.OP_SWAP_ALT + call_offset)
+    .word   (.OP_BREAK + call_offset)
+    .word   (.OP_CASETBL + call_offset)
     @ patched instructions
-    .word   .OP_SYSREQ_D
-    .word   .OP_SYSREQ_ND
+    .word   (.OP_SYSREQ_D + call_offset)
+    .word   (.OP_SYSREQ_ND + call_offset)
     @ overlay instructions
 .ifndef AMX_NO_OVERLAY
-    .word   .OP_CALL_OVL
-    .word   .OP_RETN_OVL
-    .word   .OP_SWITCH_OVL
-    .word   .OP_CASETBL_OVL
+    .word   (.OP_CALL_OVL + call_offset)
+    .word   (.OP_RETN_OVL + call_offset)
+    .word   (.OP_SWITCH_OVL + call_offset)
+    .word   (.OP_CASETBL_OVL + call_offset)
 .endif  @ AMX_NO_OVERLAY
     @ supplemental instructions
 .ifndef AMX_NO_MACRO_INSTR
-    .word   .OP_LIDX
-    .word   .OP_LIDX_B
-    .word   .OP_IDXADDR
-    .word   .OP_IDXADDR_B
-    .word   .OP_PUSH_C
-    .word   .OP_PUSH
-    .word   .OP_PUSH_S
-    .word   .OP_PUSH_ADR
-    .word   .OP_PUSHR_C
-    .word   .OP_PUSHR_S
-    .word   .OP_PUSHR_ADR
-    .word   .OP_JEQ
-    .word   .OP_JNEQ
-    .word   .OP_JSLESS
-    .word   .OP_JSLEQ
-    .word   .OP_JSGRTR
-    .word   .OP_JSGEQ
-    .word   .OP_SDIV_INV
-    .word   .OP_SUB_INV
-    .word   .OP_ADD_C
-    .word   .OP_SMUL_C
-    .word   .OP_ZERO_PRI
-    .word   .OP_ZERO_ALT
-    .word   .OP_ZERO
-    .word   .OP_ZERO_S
-    .word   .OP_EQ_C_PRI
-    .word   .OP_EQ_C_ALT
-    .word   .OP_INC
-    .word   .OP_INC_S
-    .word   .OP_DEC
-    .word   .OP_DEC_S
-    .word   .OP_SYSREQ_N
-    .word   .OP_PUSHM_C
-    .word   .OP_PUSHM
-    .word   .OP_PUSHM_S
-    .word   .OP_PUSHM_ADR
-    .word   .OP_PUSHRM_C
-    .word   .OP_PUSHRM_S
-    .word   .OP_PUSHRM_ADR
-    .word   .OP_LOAD2
-    .word   .OP_LOAD2_S
-    .word   .OP_CONST
-    .word   .OP_CONST_S
+    .word   (.OP_LIDX + call_offset)
+    .word   (.OP_LIDX_B + call_offset)
+    .word   (.OP_IDXADDR + call_offset)
+    .word   (.OP_IDXADDR_B + call_offset)
+    .word   (.OP_PUSH_C + call_offset)
+    .word   (.OP_PUSH + call_offset)
+    .word   (.OP_PUSH_S + call_offset)
+    .word   (.OP_PUSH_ADR + call_offset)
+    .word   (.OP_PUSHR_C + call_offset)
+    .word   (.OP_PUSHR_S + call_offset)
+    .word   (.OP_PUSHR_ADR + call_offset)
+    .word   (.OP_JEQ + call_offset)
+    .word   (.OP_JNEQ + call_offset)
+    .word   (.OP_JSLESS + call_offset)
+    .word   (.OP_JSLEQ + call_offset)
+    .word   (.OP_JSGRTR + call_offset)
+    .word   (.OP_JSGEQ + call_offset)
+    .word   (.OP_SDIV_INV + call_offset)
+    .word   (.OP_SUB_INV + call_offset)
+    .word   (.OP_ADD_C + call_offset)
+    .word   (.OP_SMUL_C + call_offset)
+    .word   (.OP_ZERO_PRI + call_offset)
+    .word   (.OP_ZERO_ALT + call_offset)
+    .word   (.OP_ZERO + call_offset)
+    .word   (.OP_ZERO_S + call_offset)
+    .word   (.OP_EQ_C_PRI + call_offset)
+    .word   (.OP_EQ_C_ALT + call_offset)
+    .word   (.OP_INC + call_offset)
+    .word   (.OP_INC_S + call_offset)
+    .word   (.OP_DEC + call_offset)
+    .word   (.OP_DEC_S + call_offset)
+    .word   (.OP_SYSREQ_N + call_offset)
+    .word   (.OP_PUSHM_C + call_offset)
+    .word   (.OP_PUSHM + call_offset)
+    .word   (.OP_PUSHM_S + call_offset)
+    .word   (.OP_PUSHM_ADR + call_offset)
+    .word   (.OP_PUSHRM_C + call_offset)
+    .word   (.OP_PUSHRM_S + call_offset)
+    .word   (.OP_PUSHRM_ADR + call_offset)
+    .word   (.OP_LOAD2 + call_offset)
+    .word   (.OP_LOAD2_S + call_offset)
+    .word   (.OP_CONST + call_offset)
+    .word   (.OP_CONST_S + call_offset)
 .endif  @ AMX_NO_MACRO_INSTR
     @ packed opcodes
 .ifndef AMX_NO_PACKED_OPC
-    .word   .OP_LOAD_P_PRI
-    .word   .OP_LOAD_P_ALT
-    .word   .OP_LOAD_P_S_PRI
-    .word   .OP_LOAD_P_S_ALT
-    .word   .OP_LREF_P_S_PRI
-    .word   .OP_LREF_P_S_ALT
-    .word   .OP_LODB_P_I
-    .word   .OP_CONST_P_PRI
-    .word   .OP_CONST_P_ALT
-    .word   .OP_ADDR_P_PRI
-    .word   .OP_ADDR_P_ALT
-    .word   .OP_STOR_P
-    .word   .OP_STOR_P_S
-    .word   .OP_SREF_P_S
-    .word   .OP_STRB_P_I
-    .word   .OP_LIDX_P_B
-    .word   .OP_IDXADDR_P_B
-    .word   .OP_ALIGN_P_PRI
-    .word   .OP_PUSH_P_C
-    .word   .OP_PUSH_P
-    .word   .OP_PUSH_P_S
-    .word   .OP_PUSH_P_ADR
-    .word   .OP_PUSHR_P_C
-    .word   .OP_PUSHR_P_S
-    .word   .OP_PUSHR_P_ADR
-    .word   .OP_PUSHM_P_C
-    .word   .OP_PUSHM_P
-    .word   .OP_PUSHM_P_S
-    .word   .OP_PUSHM_P_ADR
-    .word   .OP_PUSHRM_P_C
-    .word   .OP_PUSHRM_P_S
-    .word   .OP_PUSHRM_P_ADR
-    .word   .OP_STACK_P
-    .word   .OP_HEAP_P
-    .word   .OP_SHL_P_C_PRI
-    .word   .OP_SHL_P_C_ALT
-    .word   .OP_ADD_P_C
-    .word   .OP_SMUL_P_C
-    .word   .OP_ZERO_P
-    .word   .OP_ZERO_P_S
-    .word   .OP_EQ_P_C_PRI
-    .word   .OP_EQ_P_C_ALT
-    .word   .OP_INC_P
-    .word   .OP_INC_P_S
-    .word   .OP_DEC_P
-    .word   .OP_DEC_P_S
-    .word   .OP_MOVS_P
-    .word   .OP_CMPS_P
-    .word   .OP_FILL_P
-    .word   .OP_HALT_P
-    .word   .OP_BOUNDS_P
+    .word   (.OP_LOAD_P_PRI + call_offset)
+    .word   (.OP_LOAD_P_ALT + call_offset)
+    .word   (.OP_LOAD_P_S_PRI + call_offset)
+    .word   (.OP_LOAD_P_S_ALT + call_offset)
+    .word   (.OP_LREF_P_S_PRI + call_offset)
+    .word   (.OP_LREF_P_S_ALT + call_offset)
+    .word   (.OP_LODB_P_I + call_offset)
+    .word   (.OP_CONST_P_PRI + call_offset)
+    .word   (.OP_CONST_P_ALT + call_offset)
+    .word   (.OP_ADDR_P_PRI + call_offset)
+    .word   (.OP_ADDR_P_ALT + call_offset)
+    .word   (.OP_STOR_P + call_offset)
+    .word   (.OP_STOR_P_S + call_offset)
+    .word   (.OP_SREF_P_S + call_offset)
+    .word   (.OP_STRB_P_I + call_offset)
+    .word   (.OP_LIDX_P_B + call_offset)
+    .word   (.OP_IDXADDR_P_B + call_offset)
+    .word   (.OP_ALIGN_P_PRI + call_offset)
+    .word   (.OP_PUSH_P_C + call_offset)
+    .word   (.OP_PUSH_P + call_offset)
+    .word   (.OP_PUSH_P_S + call_offset)
+    .word   (.OP_PUSH_P_ADR + call_offset)
+    .word   (.OP_PUSHR_P_C + call_offset)
+    .word   (.OP_PUSHR_P_S + call_offset)
+    .word   (.OP_PUSHR_P_ADR + call_offset)
+    .word   (.OP_PUSHM_P_C + call_offset)
+    .word   (.OP_PUSHM_P + call_offset)
+    .word   (.OP_PUSHM_P_S + call_offset)
+    .word   (.OP_PUSHM_P_ADR + call_offset)
+    .word   (.OP_PUSHRM_P_C + call_offset)
+    .word   (.OP_PUSHRM_P_S + call_offset)
+    .word   (.OP_PUSHRM_P_ADR + call_offset)
+    .word   (.OP_STACK_P + call_offset)
+    .word   (.OP_HEAP_P + call_offset)
+    .word   (.OP_SHL_P_C_PRI + call_offset)
+    .word   (.OP_SHL_P_C_ALT + call_offset)
+    .word   (.OP_ADD_P_C + call_offset)
+    .word   (.OP_SMUL_P_C + call_offset)
+    .word   (.OP_ZERO_P + call_offset)
+    .word   (.OP_ZERO_P_S + call_offset)
+    .word   (.OP_EQ_P_C_PRI + call_offset)
+    .word   (.OP_EQ_P_C_ALT + call_offset)
+    .word   (.OP_INC_P + call_offset)
+    .word   (.OP_INC_P_S + call_offset)
+    .word   (.OP_DEC_P + call_offset)
+    .word   (.OP_DEC_P_S + call_offset)
+    .word   (.OP_MOVS_P + call_offset)
+    .word   (.OP_CMPS_P + call_offset)
+    .word   (.OP_FILL_P + call_offset)
+    .word   (.OP_HALT_P + call_offset)
+    .word   (.OP_BOUNDS_P + call_offset)
 .endif  @ AMX_NO_PACKED_OPC
 .equ    opcodelist_size, .-amx_opcodelist
 
