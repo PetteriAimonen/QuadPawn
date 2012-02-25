@@ -5,16 +5,22 @@
 NAME = PAWN_APP
 
 # Names of the object files (add all .c files you want to include)
-OBJS = main.o tinyprintf.o ds203_io.o
+OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
+	file_selector.o msgbox.o metadata.o debug.o \
+	fatfs_glue.o ff.o \
+	amx.o amxexec.o amxaux.o amx_debug.o \
+	amx_draw.o amx_core.o amx_string.o amx_fixed.o amx_wavein.o amx_menu.o \
+	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o
 
 # Linker script (choose which application position to use)
 LFLAGS  = -L linker_scripts -T app4.lds
 
 # Any libraries to include
-LIBS = -lm
+LIBS = -lm -lgcc baselibc/libc.a
 
 # Include directories for .h files
-CFLAGS = -I stm32_headers -I DS203 -I amx
+CFLAGS = -I baselibc/include -I stm32_headers -I DS203 \
+	-I amx -I fatfs -I libfixmath
 
 # DS203 generic stuff
 OBJS += startup.o BIOS.o Interrupt.o
@@ -28,13 +34,13 @@ OD      = arm-none-eabi-objdump
 CFLAGS += -mcpu=cortex-m3 -mthumb -mno-thumb-interwork
 
 # Optimization & debug settings
-CFLAGS += -fno-common -O1 -g -std=gnu99
+CFLAGS += -fno-common -Os -ffunction-sections -g -std=gnu99
 
 # Compiler warnings
 CFLAGS += -Wall -Werror -Wno-unused
 
 # Default linker arguments (disables GCC-provided startup.c, creates .map file)
-LFLAGS += -nostartfiles -Wl,-Map=build/$(NAME).map -eReset_Handler
+LFLAGS += -nostartfiles -nostdlib -Wl,-Map=build/$(NAME).map -eReset_Handler -Wl,-gc-sections
 
 # Directory for .o files
 VPATH = build
@@ -54,8 +60,24 @@ build/$(NAME).elf: ${_OBJS}
 # Rebuild all objects if any header changes
 $(_OBJS): DS203/*.h Makefile
 
+build/cortex_stub.o: gdb_stub/cortex_stub.c gdb_stub/*.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+build/%.o: amx/%.c
+	$(CC) $(CFLAGS) -Os -Wno-parentheses -DAMX_ASM=1 -DAMX_ANSIONLY=1 \
+		-DAMX_NO_PACKED_OPC=1 -DAMX_NO_DYNALOAD=1 \
+		-c -o $@ $<
+
 build/amxexec.o: amx/amxexec_thumb2_gas.s
-	$(CC) $(CFLAGS) -Wa,--defsym,THUMB2=1 -c -o $@ $<
+	$(CC) $(CFLAGS) -Wa,-mthumb -Wa,--defsym,THUMB2=1 \
+		-Wa,--defsym,AMX_NO_PACKED_OPC=1\
+		-c -o $@ $<
+
+build/ff.o: fatfs/ff.c fatfs/*.h
+	$(CC) $(CFLAGS) -Os -fno-strict-aliasing -c -o $@ $<
+
+build/%.o: libfixmath/%.c
+	$(CC) $(CFLAGS) -DFIXMATH_NO_CACHE -c -o $@ $<
 
 build/%.o: %.c *.h
 	$(CC) $(CFLAGS) -c -o $@ $<

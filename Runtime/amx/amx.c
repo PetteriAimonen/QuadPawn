@@ -424,6 +424,7 @@ typedef enum {
 #if BYTE_ORDER==BIG_ENDIAN || PAWN_CELL_SIZE==32
   static void swap32(uint32_t *v)
   {
+#ifndef __GNUC__
     unsigned char *s = (unsigned char *)v;
     unsigned char t;
 
@@ -436,6 +437,9 @@ typedef enum {
     t=s[1];
     s[1]=s[2];
     s[2]=t;
+#else
+	*v = __builtin_bswap32(*v);
+#endif
   }
 #endif
 
@@ -465,7 +469,7 @@ typedef enum {
   }
 #endif
 
-#if defined AMX_ALIGN || defined AMX_INIT
+#if (defined AMX_ALIGN || defined AMX_INIT) && !defined AMX_SMALL
 uint16_t * AMXAPI amx_Align16(uint16_t *v)
 {
   assert_static(sizeof(*v)==2);

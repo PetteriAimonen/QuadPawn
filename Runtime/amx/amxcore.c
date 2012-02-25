@@ -41,10 +41,18 @@
   #include <windows.h>
 #endif
 
+#define  stricmp(a,b) strcasecmp(a,b)
+
 /* A few compilers do not provide the ANSI C standard "time" functions */
-#if !defined SN_TARGET_PS2 && !defined _WIN32_WCE && !defined __ICC430__
-  #include <time.h>
-#endif
+//#if !defined SN_TARGET_PS2 && !defined _WIN32_WCE && !defined __ICC430__
+//  #include <time.h>
+//#endif
+#include <stm32f10x.h>
+static int time()
+{
+	// Used for random seed (just in case someone wants to write a game someday :)
+	return (TIM8->RCR << 24) | (TIM8->CNT << 16) | (TIM1->RCR << 8) | (TIM1->CNT);
+}
 
 #if defined _UNICODE
 # include <tchar.h>

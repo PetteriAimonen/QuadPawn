@@ -445,11 +445,18 @@ enum {
     amx_StrParam_Type(amx,param,result,void*)
 #endif
 
+#if defined AMX_SMALL
+static inline uint16_t * AMXAPI amx_Align16(uint16_t *v) {return v;}
+static inline uint32_t * AMXAPI amx_Align32(uint32_t *v) {return v;}
+static inline uint64_t * AMXAPI amx_Align64(uint64_t *v) {return v;}
+#else
 uint16_t * AMXAPI amx_Align16(uint16_t *v);
 uint32_t * AMXAPI amx_Align32(uint32_t *v);
 #if defined _I64_MAX || defined HAVE_I64
   uint64_t * AMXAPI amx_Align64(uint64_t *v);
 #endif
+#endif
+
 int AMXAPI amx_Allot(AMX *amx, int cells, cell **address);
 int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params);
 int AMXAPI amx_Cleanup(AMX *amx);

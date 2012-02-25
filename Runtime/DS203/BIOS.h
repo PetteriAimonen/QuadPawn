@@ -111,17 +111,17 @@ CH_D Trigger source & kind select =>
 #define FIFO_START             2    // FIFO start flag: 1 = start
 #define FIFO_FULL              3    // FIFO full flag: 1 = Full
 #define KEY_STATUS             4    // Current keys status 
-  #define K_ITEM_D_STATUS      0x0008    // 0 = Key push on
-  #define K_ITEM_S_STATUS      0x0040    // 0 = Key push on
-  #define KEY3_STATUS          0x0100    // 0 = Key push on
-  #define KEY4_STATUS          0x0200    // 0 = Key push on
-  #define K_INDEX_D_STATUS     0x0400    // 0 = Key push on
-  #define K_INDEX_I_STATUS     0x0800    // 0 = Key push on
-  #define K_INDEX_S_STATUS     0x1000    // 0 = Key push on
-  #define KEY2_STATUS          0x2000    // 0 = Key push on
-  #define KEY1_STATUS          0x4000    // 0 = Key push on
-  #define K_ITEM_I_STATUS      0x8000    // 0 = Key push on
-  #define ALL_KEYS 0xFF48
+#define K_ITEM_D_STATUS      0x0008    // 0 = Key push on
+#define K_ITEM_S_STATUS      0x0040    // 0 = Key push on
+#define KEY3_STATUS          0x0100    // 0 = Key push on
+#define KEY4_STATUS          0x0200    // 0 = Key push on
+#define K_INDEX_D_STATUS     0x0400    // 0 = Key push on
+#define K_INDEX_I_STATUS     0x0800    // 0 = Key push on
+#define K_INDEX_S_STATUS     0x1000    // 0 = Key push on
+#define KEY2_STATUS          0x2000    // 0 = Key push on
+#define KEY1_STATUS          0x4000    // 0 = Key push on
+#define K_ITEM_I_STATUS      0x8000    // 0 = Key push on
+#define ALL_KEYS 0xFF48
 #define USB_POWER              5    // USB power status: 1 = Power ON
 #define V_BATTERY              6    // Battery voltage (mV)
 #define VERTICAL               7    // pointer to the vertical channel properties
@@ -268,6 +268,53 @@ extern T_attr *T_Attr;
  u8 __ProgFileSec(u8* Buffer, u16* Cluster);
  u8 __CloseFile(u8* Buffer, u32 Lenght, u16* Cluster, u32* pDirAddr);
 /**/
- 
+
+/* Some other stuff that is not exported by the BIOS */
+#include <stm32f10x.h>
+
+#define always_read(x) asm(""::"r"(x))
+
+// Seems like we need a bit of delay around the RS changes
+static void LCD_DELAY()
+{
+    for (int i = 0; i < 5; i++)
+        asm("nop");
+}
+
+#define LCD_RS_LOW()      GPIOD->BRR  = (1<<12)
+#define LCD_RS_HIGH()     GPIOD->BSRR = (1<<12)
+#define LCD_PORT    (*((vu16 *)(0x60000000+0x00)))
+#define LCD_TYPE_ILI9327 0x02049327
+
+static void LCD_WR_Ctrl(u16 Reg) 
+{
+    LCD_RS_LOW();
+    LCD_PORT = Reg;        //Reg. Addr.
+    LCD_DELAY();
+    LCD_RS_HIGH();
+}
+
+static void LCD_WR_REG(u16 Reg, u16 Data) 
+{
+    LCD_RS_LOW();
+    LCD_PORT = Reg;        //Reg. Addr.
+    LCD_DELAY();
+    LCD_RS_HIGH();
+    LCD_PORT  = Data;       //Reg. Data 
+    LCD_DELAY();
+}
+
+static uint32_t LCD_RD_Type() 
+{ 
+    uint32_t LCD_Type;
+    LCD_WR_Ctrl(0xEF);
+    always_read(LCD_PORT);
+    LCD_Type  = (LCD_PORT&0xFF)<<24;
+    LCD_Type |= (LCD_PORT&0xFF)<<16;
+    LCD_Type |= (LCD_PORT&0xFF)<<8;
+    LCD_Type |= (LCD_PORT&0xFF);
+    return LCD_Type;
+}
+
 #endif  
 /*******************************  END OF FILE  ********************************/

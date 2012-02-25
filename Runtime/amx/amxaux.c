@@ -22,6 +22,8 @@
 #include "amx.h"
 #include "amxaux.h"
 
+#if 0
+
 size_t AMXAPI aux_ProgramSize(const char *filename)
 {
   FILE *fp;
@@ -93,6 +95,8 @@ int AMXAPI aux_FreeProgram(AMX *amx)
   } /* if */
   return AMX_ERR_NONE;
 }
+
+#endif
 
 char * AMXAPI aux_StrError(int errnum)
 {

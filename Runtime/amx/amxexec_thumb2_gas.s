@@ -762,37 +762,39 @@ amx_exec_run:
     itt eq
     moveq r11, #AMX_ERR_DIVIDE  @ r0 == 0 -> set error code
     beq .amx_exit               @ r0 == 0 -> jump to error-exit
-    stmfd sp!, {r2 - r3, lr}    @ need two more scratch registers
-    @ save input registers and create absolute values
-    movs r2, r0
-    it mi
-    rsbmi r0, r0, #0            @ if r2 < 0, r0 = #0 - r0
-    movs r3, r1
-    it mi
-    rsbmi r1, r1, #0            @ if r3 < 0, r1 = #0 - r1
-    @ do the division
-  .ifdef THUMB2
-    udiv r11, r1, r0            @ r11 = r1 / r0
-    mls r1, r0, r11, r1         @ r1 = r1 - (r0 * r11) = r1 % r0
-    mov r0, r11                 @ r0 = r1 / r0
-  .else
-    bl  amx_div                 @ r0 = r1 / r0, r1 = r1 % r0
-  .endif
-    @ patch signs
-    cmp r2, #0                  @ check sign of original value of divisor
-    it mi
-    rsbmi r1, r1, #0            @ sign(remainder) = sign(divisor)
-    teq r2, r3                  @ check signs of dividend and divisor
-    bpl .op_div_done            @ sign(divident) == sign(divisor) -> done
-    rsb r0, r0, #0              @ sign(quotient) = sign(divident) XOR sign(divisor)
-    @ so the quotient is negative (or zero); if the remainder is non-zero,
-    @ floor the quotient and adjust the remainder
-    cmp r1, #0
-    itt ne
-    subne r0, r0, #1            @ remainder != 0 -> r0 = r0 - 1
-    rsbne r1, r1, r2            @ remainder != 0 -> r1 = divisor - r1
-.op_div_done:
-    ldmfd sp!, {r2 - r3, lr}
+    sdiv r0, r1, r0;
+
+@    stmfd sp!, {r2 - r3, lr}    @ need two more scratch registers
+@    @ save input registers and create absolute values
+@    movs r2, r0
+@    it mi
+@    rsbmi r0, r0, #0            @ if r2 < 0, r0 = #0 - r0
+@    movs r3, r1
+@    it mi
+@    rsbmi r1, r1, #0            @ if r3 < 0, r1 = #0 - r1
+@    @ do the division
+@  .ifdef THUMB2
+@    udiv r11, r1, r0            @ r11 = r1 / r0
+@    mls r1, r0, r11, r1         @ r1 = r1 - (r0 * r11) = r1 % r0
+@    mov r0, r11                 @ r0 = r1 / r0
+@  .else
+@    bl  amx_div                 @ r0 = r1 / r0, r1 = r1 % r0
+@  .endif
+@    @ patch signs
+@    cmp r2, #0                  @ check sign of original value of divisor
+@    it mi
+@    rsbmi r1, r1, #0            @ sign(remainder) = sign(divisor)
+@    teq r2, r3                  @ check signs of dividend and divisor
+@    bpl .op_div_done            @ sign(divident) == sign(divisor) -> done
+@    rsb r0, r0, #0              @ sign(quotient) = sign(divident) XOR sign(divisor)
+@    @ so the quotient is negative (or zero); if the remainder is non-zero,
+@    @ floor the quotient and adjust the remainder
+@    cmp r1, #0
+@    itt ne
+@    subne r0, r0, #1            @ remainder != 0 -> r0 = r0 - 1
+@    rsbne r1, r1, r2            @ remainder != 0 -> r1 = divisor - r1
+@.op_div_done:
+@    ldmfd sp!, {r2 - r3, lr}
     NEXT
 
 .OP_ADD:                        @ tested

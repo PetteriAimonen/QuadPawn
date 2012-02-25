@@ -83,21 +83,22 @@ typedef struct tagAMX_DBG_LINE {
   int32_t  line;            /* line number */
 } PACKED AMX_DBG_LINE;
 
+typedef struct tagAMX_DBG_SYMDIM {
+  int16_t  tag;             /* tag for the array dimension */
+  uint32_t size;            /* size of the array dimension */
+} PACKED AMX_DBG_SYMDIM;
+
 typedef struct tagAMX_DBG_SYMBOL {
-  uint32_t address;         /* address in the data segment or relative to the frame */
+  int32_t address;         /* address in the data segment or relative to the frame */
   int16_t  tag;             /* tag for the symbol */
   uint32_t codestart;       /* address in the code segment from which this symbol is valid (in scope) */
   uint32_t codeend;         /* address in the code segment until which this symbol is valid (in scope) */
   char     ident;           /* kind of symbol (function/variable) */
   char     vclass;          /* class of symbol (global/local) */
   int16_t  dim;             /* number of dimensions */
-  char     name[1];         /* ASCII string, zero-terminated */
+  char     name[20];         /* ASCII string, zero-terminated */
+  AMX_DBG_SYMDIM dims[5];
 } PACKED AMX_DBG_SYMBOL;
-
-typedef struct tagAMX_DBG_SYMDIM {
-  int16_t  tag;             /* tag for the array dimension */
-  uint32_t size;            /* size of the array dimension */
-} PACKED AMX_DBG_SYMDIM;
 
 typedef struct tagAMX_DBG_TAG {
   int16_t  tag;             /* tag id */
@@ -134,7 +135,7 @@ typedef struct tagAMX_DBG {
   #define iFUNCTN    9
 #endif
 
-
+#if 0
 int AMXAPI dbg_FreeInfo(AMX_DBG *amxdbg);
 int AMXAPI dbg_LoadInfo(AMX_DBG *amxdbg, FILE *fp);
 
@@ -150,7 +151,7 @@ int AMXAPI dbg_GetStateName(AMX_DBG *amxdbg, int state, const char **name);
 int AMXAPI dbg_GetTagName(AMX_DBG *amxdbg, int tag, const char **name);
 int AMXAPI dbg_GetVariable(AMX_DBG *amxdbg, const char *symname, ucell scopeaddr, const AMX_DBG_SYMBOL **sym);
 int AMXAPI dbg_GetArrayDim(AMX_DBG *amxdbg, const AMX_DBG_SYMBOL *sym, const AMX_DBG_SYMDIM **symdim);
-
+#endif
 
 #if !defined AMX_NO_ALIGN
   #if defined __LINUX__ || defined __FreeBSD__

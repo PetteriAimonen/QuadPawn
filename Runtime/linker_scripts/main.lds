@@ -31,7 +31,9 @@ SECTIONS
     .text : {
       _vectors = .;
       *(.isr_vectors)      /* Vector table */
+      _scode = .;
       *(.text*)        /* Program code */
+      _ecode = .;
       *(.rodata*)      /* Read only data */
       _etext = .;
       _sidata = _etext;
