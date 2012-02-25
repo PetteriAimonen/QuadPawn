@@ -1,12 +1,12 @@
 /** Functions for a scrolling console window */
 
-#include <display>
+#include <draw>
 
 /// You can set these variables from your code to control the location of
 /// the console.
 new cons_x = 0, cons_y = 0; // Bottom left corner of window
-new cons_cols = 50, cons_rows = 17; // Size of window
-new cons_col = 0, cons_row = 16; // Current position
+new cons_cols = 50, cons_rows = 15; // Size of window
+new cons_col = 0, cons_row = 14; // Current position
 new Color: cons_fg = white, Color: cons_bg = black;
 
 /// Clear the console area and return cursor to top left corner.
@@ -45,7 +45,7 @@ stock print(const str{})
         if (linepos != 0)
         {
             line{linepos} = 0;
-            display_text(line,
+            draw_text(line,
                         cons_col * fontwidth + cons_x,
                         cons_row * fontheight + cons_y,
                         cons_fg, cons_bg);

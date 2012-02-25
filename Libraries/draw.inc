@@ -28,9 +28,10 @@ const screenheight = 240;
 const fontwidth = 8;
 const fontheight = 14;
 
-/// Draw text, where x,y is the bottom left corner.
-native display_text(const str[], x, y, Color: foreground=white,
-                    Color: background=transparent);
+/// Draw text. When center is true x,y is the center of the bottom, otherwise
+/// the bottom left corner,
+native draw_text(const str[], x, y, Color: foreground=white,
+                    Color: background=transparent, bool: center = false);
 
 /// Get the LCD type information, for debugging purposes
 native lcd_type();
@@ -40,7 +41,7 @@ native fill_rectangle(x, y, w, h, Color: color);
 
 /// Fill the whole screen with same color.
 stock clear_screen(Color: color=black)
-    fill_rectangle(0, 0, 400, 240, color);
+    fill_rectangle(0, 0, 400, 220, color);
 
 /// Set pixel at given location
 native putpixel(x, y, Color: color);
@@ -62,13 +63,7 @@ native drawline_aa(Fixed: x1, Fixed: y1, Fixed: x2, Fixed: y2, Color: color=whit
 native drawline(x1, y1, x2, y2, Color: color=white, bool: dots=false);
 
 /// Draw a rectangle outline
-stock drawrectangle(x, y, w, h, Color: color=white, bool: dots=false)
-{
-    drawline(x,     y,     x + w, y,     color, dots);
-    drawline(x + w, y,     x + w, y + h, color, dots);
-    drawline(x + w, y + h, x,     y + h, color, dots);
-    drawline(x    , y + h, x,     y,     color, dots);
-}
+native draw_rectangle(x, y, w, h, Color: color=white, bool: dots=false);
 
 /// Adjust x1, w and x2 so that they are all positive and less than max.
 /// Helper function for copy_area
@@ -122,30 +117,4 @@ stock copy_area(x1, y1, w, h, x2, y2)
 ///                       0b01110,
 ///                       0b00100];
 /// The coordinates x,y correspond to bottom left corner of the bitmap.
-stock draw_bitmap(const bitmap[], x, y, Color: color, count = sizeof bitmap)
-{
-    // Find out the width of the bitmap and align it properly
-    new bits = 0;
-    for (new i = 0; i < count; i++)
-        bits |= bitmap[i];
-    
-    new width = 0;
-    while (bits)
-    {
-        bits >>>= 1;
-        width++;
-    }
-    
-    // Draw the bitmap
-    new mask = 1;
-    for (new i = width - 1; i >= 0; i--, mask <<= 1)
-    {
-        for (new j = 0; j < count; j++)
-        {
-            if (bitmap[j] & mask)
-            {
-                putpixel(x + i, y + count - j, color);
-            }
-        }
-    }
-}
+native draw_bitmap(const bitmap[], x, y, Color: color, count = sizeof bitmap, bool: center = false);

@@ -3,7 +3,7 @@
  * logarithmic.
  */
 
-#include <display>
+#include <draw>
 #include <string>
 #include <fixed>
 
@@ -170,7 +170,7 @@ stock clear_graph()
             new label{12};
             label = get_ticklabel(x, graph_xlog);
             xpix -= strlen(label) * fontwidth / 2;
-            display_text(label, xpix, graph_y - fontheight, graph_xcolor);
+            draw_text(label, xpix, graph_y - fontheight, graph_xcolor);
         }
         
         // Minor lines
@@ -205,7 +205,7 @@ stock clear_graph()
                 new label{12};
                 label = get_ticklabel(y, graph_y2log);
                 ypix -= fontheight / 2;
-                display_text(label, graph_x + graph_w + 3, ypix, graph_y2color);
+                draw_text(label, graph_x + graph_w + 3, ypix, graph_y2color);
             }
         }
     }
@@ -225,7 +225,7 @@ stock clear_graph()
             label = get_ticklabel(y, graph_ylog);
             new xpos = graph_x - strlen(label) * fontwidth - 3;
             ypix -= fontheight / 2;
-            display_text(label, xpos, ypix, graph_ycolor);
+            draw_text(label, xpos, ypix, graph_ycolor);
         }
         
         // Minor lines
@@ -244,7 +244,7 @@ stock clear_graph()
         }
     }
     
-    drawrectangle(graph_x, graph_y, graph_w, graph_h, graph_border);
+    draw_rectangle(graph_x, graph_y, graph_w, graph_h, graph_border);
 }
 
 /// Draw a line on the graph.
