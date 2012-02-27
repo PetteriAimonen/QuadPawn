@@ -836,7 +836,7 @@ DWORD get_fat (	/* 0xFFFFFFFF:Disk error, 1:Internal error, Else:Cluster status 
 		if (move_window(fs, fs->fatbase + (bc / SS(fs)))) break;
 		wc |= fs->win[bc % SS(fs)] << 8;
 		return (clst & 1) ? (wc >> 4) : (wc & 0xFFF);
-
+#ifndef _FS_FAT12ONLY
 	case FS_FAT16 :
 		if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 2)))) break;
 		p = &fs->win[clst * 2 % SS(fs)];
@@ -846,8 +846,8 @@ DWORD get_fat (	/* 0xFFFFFFFF:Disk error, 1:Internal error, Else:Cluster status 
 		if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 4)))) break;
 		p = &fs->win[clst * 4 % SS(fs)];
 		return LD_DWORD(p) & 0x0FFFFFFF;
+#endif
 	}
-
 	return 0xFFFFFFFF;	/* An error occurred at the disk I/O layer */
 }
 
@@ -888,7 +888,7 @@ FRESULT put_fat (
 			p = &fs->win[bc % SS(fs)];
 			*p = (clst & 1) ? (BYTE)(val >> 4) : ((*p & 0xF0) | ((BYTE)(val >> 8) & 0x0F));
 			break;
-
+#ifndef _FS_FAT12ONLY
 		case FS_FAT16 :
 			res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 2)));
 			if (res != FR_OK) break;
@@ -903,7 +903,7 @@ FRESULT put_fat (
 			val |= LD_DWORD(p) & 0xF0000000;
 			ST_DWORD(p, val);
 			break;
-
+#endif
 		default :
 			res = FR_INT_ERR;
 		}
@@ -1075,15 +1075,19 @@ FRESULT dir_sdi (
 	clst = dj->sclust;
 	if (clst == 1 || clst >= dj->fs->n_fatent)	/* Check start cluster range */
 		return FR_INT_ERR;
+            
+#ifndef _FS_FAT12ONLY
 	if (!clst && dj->fs->fs_type == FS_FAT32)	/* Replace cluster# 0 with root cluster# if in FAT32 */
 		clst = dj->fs->dirbase;
-
+#endif
+                        
 	if (clst == 0) {	/* Static table (root-dir in FAT12/16) */
 		dj->clust = clst;
 		if (idx >= dj->fs->n_rootdir)		/* Index is out of range */
 			return FR_INT_ERR;
 		dj->sect = dj->fs->dirbase + idx / (SS(dj->fs) / SZ_DIR);	/* Sector# */
 	}
+#ifndef _FS_ROOTDIRONLY
 	else {				/* Dynamic table (sub-dirs or root-dir in FAT32) */
 		ic = SS(dj->fs) / SZ_DIR * dj->fs->csize;	/* Entries per cluster */
 		while (idx >= ic) {	/* Follow cluster chain */
@@ -1096,6 +1100,7 @@ FRESULT dir_sdi (
 		dj->clust = clst;
 		dj->sect = clust2sect(dj->fs, clst) + idx / (SS(dj->fs) / SZ_DIR);	/* Sector# */
 	}
+#endif
 
 	dj->dir = dj->fs->win + (idx % (SS(dj->fs) / SZ_DIR)) * SZ_DIR;	/* Ptr to the entry in the sector */
 
@@ -1942,6 +1947,7 @@ FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 		dj->dir = 0;
 
 	} else {							/* Follow path */
+#ifndef _FS_ROOTDIRONLY
 		for (;;) {
 			res = create_name(dj, &path);	/* Get a segment */
 			if (res != FR_OK) break;
@@ -1966,6 +1972,11 @@ FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 			}
 			dj->sclust = LD_CLUST(dir);
 		}
+#else
+                res = create_name(dj, &path);   /* Get a segment */
+                if (res == FR_OK)
+                    res = dir_find(dj);
+#endif
 	}
 
 	return res;
@@ -2109,9 +2120,11 @@ FRESULT chk_mounted (	/* FR_OK(0): successful, !=0: any error occurred */
 	nclst = (tsect - sysect) / fs->csize;				/* Number of clusters */
 	if (!nclst) return FR_NO_FILESYSTEM;				/* (Invalid volume size) */
 	fmt = FS_FAT12;
+#ifndef _FS_FAT12ONLY
 	if (nclst >= MIN_FAT16) fmt = FS_FAT16;
 	if (nclst >= MIN_FAT32) fmt = FS_FAT32;
-
+#endif
+            
 	/* Boundaries and Limits */
 	fs->n_fatent = nclst + 2;							/* Number of FAT entries */
 	fs->database = bsect + sysect;						/* Data start sector */
@@ -3104,7 +3117,10 @@ FRESULT f_getfree (
 					if (stat == 1) { res = FR_INT_ERR; break; }
 					if (stat == 0) n++;
 				} while (++clst < (*fatfs)->n_fatent);
-			} else {
+			}
+#ifndef _FS_FAT12ONLY
+			else
+                                    {
 				clst = (*fatfs)->n_fatent;
 				sect = (*fatfs)->fatbase;
 				i = 0; p = 0;
@@ -3124,6 +3140,7 @@ FRESULT f_getfree (
 					}
 				} while (--clst);
 			}
+#endif
 			(*fatfs)->free_clust = n;
 			if (fat == FS_FAT32) (*fatfs)->fsi_flag = 1;
 			*nclst = n;
@@ -3616,8 +3633,10 @@ FRESULT f_mkfs (
 	/* Pre-compute number of clusters and FAT syb-type */
 	n_clst = n_vol / au;
 	fmt = FS_FAT12;
+#ifndef _FS_FAT12ONLY
 	if (n_clst >= MIN_FAT16) fmt = FS_FAT16;
 	if (n_clst >= MIN_FAT32) fmt = FS_FAT32;
+#endif
 
 	/* Determine offset and size of FAT structure */
 	if (fmt == FS_FAT32) {

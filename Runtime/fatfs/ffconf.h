@@ -35,6 +35,11 @@
 /   2: f_opendir and f_readdir are removed in addition to 1.
 /   3: f_lseek is removed in addition to 2. */
 
+#define _FS_FAT12ONLY 1
+/* Support only FAT12 filesystem */
+
+#define _FS_ROOTDIRONLY 1
+/* Use only the root directory of the filesystem */
 
 #define	_USE_STRFUNC	0	/* 0:Disable or 1-2:Enable */
 /* To enable string functions, set _USE_STRFUNC to 1 or 2. */
