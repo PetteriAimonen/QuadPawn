@@ -86,28 +86,55 @@ static cell AMX_NATIVE_CALL amx_wavein_istriggered(AMX *amx, const cell *params)
 }
 
 // Mangle 4 samples x 4 channels into 4 channels of 4 packed samples
-#define MANGLE_SAMPLES(CH, shift, mask) \
-    if (count##CH) \
-    { \
-        *ch##CH++ = (((values[0] >> shift) & mask) << 24) \
-                    | (((values[1] >> shift) & mask) << 16) \
-                    | (((values[2] >> shift) & mask) << 8) \
-                    | (((values[3] >> shift) & mask) << 0); \
-        count##CH--; \
+static bool mangle_samples(uint32_t *arrays[4], int counts[4], uint32_t samples[4])
+{
+    char *src = (char*)samples;
+    
+    for (int i = 0; i < 2; i++)
+    {
+        if (counts[i] > 0)
+        {
+            char *dest = (char*)arrays[i];
+            dest[3] = src[i + 0*4];
+            dest[2] = src[i + 1*4];
+            dest[1] = src[i + 2*4];
+            dest[0] = src[i + 3*4];
+            counts[i]--;
+            arrays[i]++;
+        }
     }
-
+    
+    {
+        union {
+            char c[4];
+            uint32_t i;
+        } dest;
+        dest.c[3] = src[2 + 0*4];
+        dest.c[2] = src[2 + 1*4];
+        dest.c[1] = src[2 + 2*4];
+        dest.c[0] = src[2 + 3*4];
+        
+        if (counts[2] > 0)
+        {
+            *arrays[2]++ = dest.i & 0x01010101;
+            counts[2]--;
+        }
+        
+        if (counts[3] > 0)
+        {
+            *arrays[3]++ = (dest.i >> 1) & 0x01010101;
+            counts[3]--;
+        }
+    }
+    
+    return counts[0] > 0 || counts[1] > 0 || counts[2] > 0 || counts[3] > 0;
+}
 
 static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
 {
     // wavein_read(chA{}, chB{}, chC{}, chD{}, countA, countB, countC, countD);
-    uint32_t *chA = (uint32_t*)params[1];
-    uint32_t *chB = (uint32_t*)params[2];
-    uint32_t *chC = (uint32_t*)params[3];
-    uint32_t *chD = (uint32_t*)params[4];
-    int countA = params[5];
-    int countB = params[6];
-    int countC = params[7];
-    int countD = params[8];
+    uint32_t **arrays = (uint32_t**)&params[1]; // Array of 4
+    int *counts = (int*)&params[5]; // Array of 4
     
     printf("Start\n");
     while (!__Get(FIFO_START));
@@ -117,18 +144,17 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
     bool full = __Get(FIFO_FULL);
     printf("Full: %d\n", full);
     
-    while (countA || countB || countC || countD)
+    uint32_t samples[4];
+    
+    do
     {
-        printf("Samples left: %d\n", countA);
-        uint32_t values[4];
-        
         if (full)
         {
             // This branch is used for fast captures (samplerate > 1kHz)
-            values[0] = __Read_FIFO();
-            values[1] = __Read_FIFO();
-            values[2] = __Read_FIFO();
-            values[3] = __Read_FIFO();
+            samples[0] = __Read_FIFO();
+            samples[1] = __Read_FIFO();
+            samples[2] = __Read_FIFO();
+            samples[3] = __Read_FIFO();
         }
         else
         {
@@ -137,17 +163,12 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
             for (int i = 0; i < 4; i++)
             {
                 while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
-                values[i] = __Read_FIFO();
+                samples[i] = __Read_FIFO();
             }
             
             full = __Get(FIFO_FULL);
         }
-        
-        MANGLE_SAMPLES(A, 0, 0xFF);
-        MANGLE_SAMPLES(B, 8, 0xFF);
-        MANGLE_SAMPLES(C, 16, 0x01);
-        MANGLE_SAMPLES(D, 17, 0x01);
-    }
+    } while(mangle_samples(arrays, counts, samples));
     
     return 0;
 }
@@ -229,14 +250,8 @@ static cell AMX_NATIVE_CALL amx_wavein_realtime_read(AMX *amx, const cell *param
     if (fifo_read_pos < 0) return false;
     
     // wavein_realtime_read(chA{}, chB{}, chC{}, chD{}, countA, countB, countC, countD);
-    uint32_t *chA = (uint32_t*)params[1];
-    uint32_t *chB = (uint32_t*)params[2];
-    uint32_t *chC = (uint32_t*)params[3];
-    uint32_t *chD = (uint32_t*)params[4];
-    int countA = params[5];
-    int countB = params[6];
-    int countC = params[7];
-    int countD = params[8];
+    uint32_t **arrays = (uint32_t**)&params[1]; // Array of 4
+    int *counts = (int*)&params[5]; // Array of 4
     
     int write_pos = fifo_halfsize * 2 - DMA1_Channel4->CNDTR / 2;
     
@@ -247,24 +262,20 @@ static cell AMX_NATIVE_CALL amx_wavein_realtime_read(AMX *amx, const cell *param
         return false;
     }
     
-    while (countA || countB || countC || countD)
+    uint32_t* samples;
+    do
     {
         while (fifo_read_pos <= write_pos && fifo_read_pos + 4 >= write_pos) {
             // Wait for new samples
             write_pos = fifo_halfsize * 2 - DMA1_Channel4->CNDTR / 2;
         }
         
-        uint32_t* values = fifo + fifo_read_pos;
-        
-        MANGLE_SAMPLES(A, 0, 0xFF);
-        MANGLE_SAMPLES(B, 8, 0xFF);
-        MANGLE_SAMPLES(C, 16, 0x01);
-        MANGLE_SAMPLES(D, 17, 0x01);
+        samples = fifo + fifo_read_pos;
         
         fifo_read_pos = (fifo_read_pos + 4) % (2 * fifo_halfsize);
         if (fifo_read_pos == 0)
             DMA1->IFCR = DMA_IFCR_CTCIF4;
-    }
+    } while (mangle_samples(arrays, counts, samples));
     
     return true;
 }

@@ -31,7 +31,9 @@ int amx_CoreInit(AMX *amx);
 int amxinit_string(AMX *amx);
 int amxinit_fixed(AMX *amx);
 int amxinit_wavein(AMX *amx);
+int amxinit_waveout(AMX *amx);
 int amxinit_menu(AMX *amx);
+int amx_menu_doevents(AMX *amx);
 
 // Copied from amx.c
 #define NUMENTRIES(hdr,field,nextfield) \
@@ -83,6 +85,7 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_string(&amx);
     amxinit_fixed(&amx);
     amxinit_wavein(&amx);
+    amxinit_waveout(&amx);
     amxinit_menu(&amx);
     
     // Check that everything has been registered
@@ -106,6 +109,11 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     }
     
     return 0;
+}
+
+int doevents(AMX *amx)
+{
+    return amx_menu_doevents(amx);
 }
 
 #define REMAINING ((p < end) ? (end - p) : 0)
@@ -229,10 +237,13 @@ int main(void)
     printf("HEre!\n");
     
     FRESULT status = f_mount(0, &fatfs);
-    if (status != FR_OK)
+    while (status != FR_OK)
     {
-        debugf("Filesystem mount failed: %d ", status);
-        delay_ms(5000);
+        char buf[100];
+        snprintf(buf, sizeof(buf), "Failed to open the FAT12 filesystem: "
+                 "f_mount returned %d", status);
+        show_msgbox("Filesystem error", buf);
+        status = f_mount(0, &fatfs);
     }
     
     while (true)
@@ -246,7 +257,7 @@ int main(void)
         int status = loadprogram(filename, error, sizeof(error));
         if (status != 0)
         {
-            char buffer[200] = {0};
+            char buffer[200];
             snprintf(buffer, sizeof(buffer),
                      "Loading of program %s failed:\n\n"
                      "Error %d: %s\n\n"
@@ -261,6 +272,20 @@ int main(void)
             
             cell ret;
             status = amx_Exec(&amx, &ret, AMX_EXEC_MAIN);
+                
+            while (status == AMX_ERR_SLEEP)
+            {
+                AMX nested_amx = amx;
+                uint32_t end = get_time() + amx.pri;
+                do {
+                    status = doevents(&nested_amx);
+                } while (get_time() < end && status == 0);
+                
+                if (status == 0)
+                    status = amx_Exec(&amx, &ret, AMX_EXEC_CONT);
+                else
+                    amx = nested_amx; // Report errors properly
+            }
             
             if (status != 0)
             {

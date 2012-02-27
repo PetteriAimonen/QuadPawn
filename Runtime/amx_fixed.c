@@ -38,6 +38,11 @@ static cell AMX_NATIVE_CALL amx_exp(AMX *amx, const cell *params)
     return fix16_exp(params[1]);
 }
 
+static cell AMX_NATIVE_CALL amx_log(AMX *amx, const cell *params)
+{
+    return fix16_log(params[1]);
+}
+
 static cell AMX_NATIVE_CALL amx_sqrt(AMX *amx, const cell *params)
 {
     return fix16_sqrt(params[1]);
@@ -63,6 +68,7 @@ int amxinit_fixed(AMX *amx)
         {"fixed", amx_fixed},
         {"fround", amx_fround},
         {"exp", amx_exp},
+        {"log", amx_log},
         {"sqrt", amx_sqrt},
         {"sin", amx_sin},
         {"atan2", amx_atan2},
