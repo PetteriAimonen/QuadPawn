@@ -124,44 +124,7 @@ stock Fixed:pow(Fixed:value, exponent)
 }
 
 /// Calculate natural logarithm of value
-stock Fixed:log(Fixed: value)
-{
-    new Fixed: guess = 2;
-    new scaling = 0;
-    new Fixed: delta;
-    new count = 0;
-    
-    // Bring the value to the most accurate range (100 > x > 1)
-    while (value > 100)
-    {
-        value /= exp_base;
-        scaling++;
-    }
-    
-    while (value < 1)
-    {
-        value *= exp_base;
-        scaling--;
-    }
-    
-    do
-    {
-        // Solving e(x) = y using Newton's method
-        // f(x) = e(x) - y
-        // f'(x) = e(x)
-        new Fixed: e = exp(guess);
-        delta = (value - e) / e;
-        
-        // It's unlikely that logarithm is very large, so avoid overshooting.
-        if (delta > FIX(3.0))
-            delta = FIX(3.0)
-        
-        guess += delta;
-        
-    } while (count++ < 10 && (delta > Fixed:1 || delta < Fixed:-1));
-    
-    return guess + scaling;
-}
+native Fixed:log(Fixed: value);
 
 /// Calculate base-10 logarithm
 stock Fixed:log10(Fixed: value)

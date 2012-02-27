@@ -29,8 +29,8 @@ new Color: graph_y2color = green;
 /// xmin, xmax: the minimum and maximum value of the X axis
 /// xmajor: the step between major gridlines
 /// xminor: the divider of xmajor to get minor grid step
-new Fixed: graph_xmin = FIX(0.0), Fixed: graph_xmax = FIX(100.0);
-new Fixed: graph_xmajor = FIX(20.0), graph_xminor = 2;
+new Fixed: graph_xmin = FIX(0.0), Fixed: graph_xmax = FIX(250.0);
+new Fixed: graph_xmajor = FIX(50.0), graph_xminor = 5;
 
 /// xlog: use logarithmic X axis
 /// The meaning of xmin, xmax and x coordinates changes: you should set them
@@ -39,8 +39,8 @@ new Fixed: graph_xmajor = FIX(20.0), graph_xminor = 2;
 new bool: graph_xlog = false;
 
 /// Scaling for the left Y axis
-new Fixed: graph_ymin = FIX(0.0), Fixed: graph_ymax = FIX(100.0);
-new Fixed: graph_ymajor = FIX(20.0), graph_yminor = 2;
+new Fixed: graph_ymin = FIX(0.0), Fixed: graph_ymax = FIX(250.0);
+new Fixed: graph_ymajor = FIX(50.0), graph_yminor = 5;
 new bool: graph_ylog = false;
 
 /// Scaling for the right Y axis (set y2min = y2max to disable)
@@ -154,6 +154,10 @@ stock get_ticklabel(Fixed: value, bool: log)
 /// Clear the graph area and draw grid, borders and ticks.
 stock clear_graph()
 {
+    // Reset the draw function "previous value" variables
+    graph_draw(fix16_min, fix16_min);
+    graph_drawy2(fix16_min, fix16_min);
+    
     fill_rectangle(graph_x, graph_y, graph_w, graph_h, graph_bg);
     
     // Draw x axis grid

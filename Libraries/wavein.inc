@@ -100,13 +100,13 @@ native wavein_realtime_stop();
 /// Start a realtime logic level capture. The logic signals will be compressed
 /// using run-length-encoding. The fifo is used as a temporary storage and
 /// must be atleast 1kB (256 cells). Samplerate is always 500kHz.
-native wavein_logic_start(fifo[], count = sizeof fifo);
+//native wavein_logic_start(fifo[], count = sizeof fifo);
 
 /// Fetch one event from the realtime logic signal buffer.
 /// microseconds: time passed since last event
 /// levels: the new levels of the channels, in the 4 lowest bits.
 /// If the buffer overruns, the capture will stop and this function will return
 /// false.
-native bool: wavein_logic_read(&microseconds, &levels);
+//native bool: wavein_logic_read(&microseconds, &levels);
 
-native wavein_logic_stop();
+//native wavein_logic_stop();
