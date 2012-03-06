@@ -4,7 +4,7 @@
 
 #include <fixed>
  
-native strlen(const string[]);
+native strlen(const string{});
 
 /// Add source string to the end of the destination string
 stock strcat(dest{}, const source{}, maxlength=sizeof dest)
@@ -12,11 +12,11 @@ stock strcat(dest{}, const source{}, maxlength=sizeof dest)
     maxlength *= 4;
     maxlength--; // Space for terminating zero
 
-    new pos = 0;
-    while (dest{pos} != 0 && maxlength--) pos++;
-
+    new pos = strlen(dest);
+    maxlength -= pos;
+    
     new pos2 = 0;
-    while (source{pos2} != 0 && maxlength--)
+    while (source{pos2} != 0 && maxlength-- > 0)
         dest{pos++} = source{pos2++};
     
     dest{pos} = 0;
@@ -25,24 +25,16 @@ stock strcat(dest{}, const source{}, maxlength=sizeof dest)
 /// Copy source string to dest
 stock strcpy(dest{}, const source{}, maxlength=sizeof dest)
 {
-    maxlength *= 4;
-    maxlength--;
-    new pos = 0;
-    while (source{pos} != 0 && maxlength--)
-    {
-        dest{pos} = source{pos};
-        pos++;
-    }
-    
-    dest{pos} = 0;
+    dest{0} = 0;
+    strcat(dest, source, maxlength);
 }
 
-/// Convert string to integer, starting at string[index].
+/// Convert string to integer, starting at str{index}.
 /// Writes the position of the first non-numeric character in endindex.
-native strval(const string[], index = 0, &endindex = 0, base = 10);
+native strval(const str{}, index = 0, &endindex = 0, base = 10);
 
 /// Convert integer to string, returns the number of characters.
-native valstr(dest[], value, maxlength = sizeof dest, base = 10);
+native valstr(dest[], value, maxlength = sizeof dest, base = 10, minlength = 0);
 
 /// Return integer converted to string, shorthand for strval
 stock str(value)
@@ -63,45 +55,18 @@ stock strf(Fixed: value, decimals = 4)
         return result;
     }
     
-    new pos = valstr(result, ftrunc(value)); 
-    
-    if (pos == 0)
-    {
-        result{pos} = '0';
-        pos++;
-    }
-    
-    result{pos} = '.';
-    pos++;
+    valstr(result, ftrunc(value)); 
+    strcat(result, ".");
     
     new scale = 1;
     for (new i = 0; i < decimals; i++) scale *= 10;
     
     new fracpart{8};
-    new count = valstr(fracpart, fround(frac(value) * scale));
-    
-    // Add any missing zeros in between
-    while (count < decimals)
-    {
-        decimals--;
-        result{pos} = '0';
-        pos++;
-    }
-    
-    // Add the decimals
-    new i = 0;
-    while (decimals > 0)
-    {
-        result{pos} = fracpart{i};
-        pos++;
-        i++;
-        decimals--;
-    }
+    valstr(fracpart, fround(frac(value) * scale), .minlength = decimals);
+    strcat(result, fracpart);
     
     return result;
 }
-
-// native strformat(dest[], size=sizeof dest, bool:pack=true, const format[], {Fixed,Float,_}:...);
 
 stock tolower(c)
 {

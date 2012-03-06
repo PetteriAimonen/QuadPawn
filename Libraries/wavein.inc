@@ -60,8 +60,10 @@ native wavein_samplerate(frequency);
 /// threshold: Set the voltage threshold for triggering
 /// pulse_time: Set the time threshold for pulse triggers
 /// delay: Delay capture after the trigger event (delayed trigger)
+/// interlaced: Capture chA and chB alternately with double samplerate
 native wavein_settrigger(TriggerMode: mode, Channel: channel = Ch_A,
-                      threshold = 128, pulse_time = 10, delay = 1);
+                      threshold = 128, pulse_time = 10, delay = 1,
+                      bool: interlaced = false);
 
 /// Start the capture, i.e. start looking for trigger
 /// If sync is true, the capture is synchronized with the waveout output so
@@ -76,7 +78,7 @@ native bool: wavein_istriggered();
 /// an empty array for some channel, that channel is not captured.
 /// If the trigger has not yet occurred, this function will wait for it.
 /// Samples are stored in packed format (8 bits per value), so use {} to index
-/// to the arrays.
+/// to the arrays. The number of samples read is always a multiple of 4.
 native wavein_read(chA{}, chB{} = {0}, chC{} = {0}, chD{} = {0},
     countA = sizeof chA, countB = sizeof chB, countC = sizeof chC, countD = sizeof chD);
 
@@ -96,7 +98,7 @@ native bool: wavein_realtime_read(chA{}, chB{} = {0}, chC{} = {0}, chD{} = {0},
     countA = sizeof chA, countB = sizeof chB, countC = sizeof chC, countD = sizeof chD);
 
 native wavein_realtime_stop();
-    
+
 /// Start a realtime logic level capture. The logic signals will be compressed
 /// using run-length-encoding. The fifo is used as a temporary storage and
 /// must be atleast 1kB (256 cells). Samplerate is always 500kHz.

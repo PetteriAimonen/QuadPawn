@@ -253,6 +253,7 @@ stock clear_graph()
 
 /// Draw a line on the graph.
 /// If x2 and y2 are not specified, continue from previous point.
+/// You can pass x1 = y1 = fix16_min to make a break in the graph.
 stock graph_draw(Fixed: x1, Fixed: y1, Fixed: x2 = fix16_min, Fixed: y2 = fix16_min, Color: color = Color: cellmin)
 {
     static Fixed: graph_prevx = fix16_min, Fixed: graph_prevy = fix16_min;
@@ -269,7 +270,7 @@ stock graph_draw(Fixed: x1, Fixed: y1, Fixed: x2 = fix16_min, Fixed: y2 = fix16_
     graph_prevx = x1;
     graph_prevy = y1;
     
-    if (x2 != fix16_min)
+    if (x2 != fix16_min && x1 != fix16_min)
         drawline_aa(graph_getx(x1), graph_gety(y1), graph_getx(x2), graph_gety(y2), color);
 }
 
@@ -290,6 +291,6 @@ stock graph_drawy2(Fixed: x1, Fixed: y1, Fixed: x2 = fix16_min, Fixed: y2 = fix1
     graph_prevx = x1;
     graph_prevy = y1;
 
-    if (x2 != fix16_min)
+    if (x2 != fix16_min && x1 != fix16_min)
         drawline_aa(graph_getx(x1), graph_gety2(y1), graph_getx(x2), graph_gety2(y2), color);
 }
