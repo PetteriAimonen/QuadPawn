@@ -3,12 +3,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "amx.h"
+#include "amxpool.h"
+
 #include "BIOS.h"
 #include "stm32f10x.h"
 #include "ds203_io.h"
 #include "Interrupt.h"
 #include "ff.h"
-#include "amx.h"
+
 #include "menubar.h"
 #include "buttons.h"
 #include "file_selector.h"
@@ -23,9 +26,10 @@
 
 FATFS fatfs;
 AMX amx;
+FIL amx_file;
 
 // Data block allocated for the virtual machine
-char vm_data[30000];
+uint8_t vm_data[30000];
 
 int amxinit_display(AMX *amx);
 int amx_CoreInit(AMX *amx);
@@ -54,6 +58,29 @@ void TimerTick()
     }
 }
 
+int overlay_callback(AMX *amx, int index)
+{
+    FIL *file = &amx_file;
+    AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
+    AMX_OVERLAYINFO *tbl = (AMX_OVERLAYINFO*)(amx->base + hdr->overlays);
+    
+    amx->codesize = tbl[index].size;
+    amx->code = amx_poolfind(index);
+    if (amx->code == NULL)
+    {
+        // Have to load from disc
+        if ((amx->code = amx_poolalloc(tbl[index].size, index)) == NULL)
+            return AMX_ERR_OVERLAY;   /* failure allocating memory for the overlay */
+        
+        f_lseek(file, hdr->cod + tbl[index].offset);
+        unsigned count;
+        f_read(file, amx->code, tbl[index].size, &count);
+        if (count != tbl[index].size)
+            return AMX_ERR_FORMAT;
+    }
+    return AMX_ERR_NONE;
+}
+
 // Copied from amx.c
 #define NUMENTRIES(hdr,field,nextfield) \
                         (unsigned)(((hdr)->nextfield - (hdr)->field) / (hdr)->defsize)
@@ -67,8 +94,8 @@ void TimerTick()
 
 int loadprogram(const char *filename, char *error, size_t error_size)
 {
-    FIL file;
-    FRESULT status = f_open(&file, filename, FA_READ);
+    FIL *file = &amx_file;
+    FRESULT status = f_open(file, filename, FA_READ);
     if (status != FR_OK)
     {
         snprintf(error, error_size, "Could not open file %s: %d", filename, status);
@@ -76,27 +103,44 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     }
     
     /* Read file header */
+    memset(&amx, 0, sizeof(amx));
     AMX_HEADER hdr;
     UINT read_count;
-    f_read(&file, &hdr, sizeof hdr, &read_count);
+    f_read(file, &hdr, sizeof hdr, &read_count);
     if (read_count != sizeof hdr || hdr.magic != AMX_MAGIC)
         return AMX_ERR_FORMAT;
     
-    if ((hdr.flags & AMX_FLAG_OVERLAY) != 0) {
-        snprintf(error, error_size, "Code overlays are not yet supported.");
-        return AMX_ERR_OVERLAY;
+    if (hdr.flags & AMX_FLAG_OVERLAY)
+    {
+        // Read the header
+        f_lseek(file, 0);
+        f_read(file, vm_data, hdr.cod, &read_count);
+        
+        // Read the data block
+        f_lseek(file, hdr.dat);
+        unsigned dat_size = hdr.hea - hdr.dat;
+        f_read(file, vm_data + hdr.cod, dat_size, &read_count);
+        if (read_count != dat_size)
+            return AMX_ERR_FORMAT;
+        
+        unsigned static_size = (hdr.stp - hdr.dat) + hdr.cod;
+        amx_poolinit(vm_data + static_size, sizeof(vm_data) - static_size);
+        
+        amx.data = vm_data + hdr.cod;
+        amx.overlay = overlay_callback;
+    }
+    else
+    {
+        if (hdr.stp > sizeof(vm_data))
+            return AMX_ERR_MEMORY;
+        
+        /* Read the actual file, including the header (again) */
+        f_lseek(file, 0);
+        f_read(file, vm_data, hdr.size, &read_count);
+        if (read_count != hdr.size)
+            return AMX_ERR_FORMAT;
     }
     
-    if (hdr.stp > sizeof(vm_data))
-        return AMX_ERR_MEMORY;
-    
-    /* Read the actual file, including the header (again) */
-    f_lseek(&file, 0);
-    f_read(&file, vm_data, hdr.size, &read_count);
-    if (read_count != hdr.size)
-        return AMX_ERR_FORMAT;
-    
-    memset(&amx, 0, sizeof(amx));
     AMXERRORS(amx_Init(&amx, vm_data));
     
     amxinit_display(&amx);
@@ -155,7 +199,7 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
                   amx->cip, amx->pri, amx->alt);
     
     {
-        FIL file;
+        FIL *file = &amx_file;
         AMX_DEBUG_INFO dbg;
         char tmp[40];
         bool have_dbg = false;
@@ -166,8 +210,7 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
         }
         else
         {
-            f_open(&file, filename, FA_READ);
-            have_dbg = amxdbg_load(&file, &dbg);
+            have_dbg = amxdbg_load(file, &dbg);
             
             if (!have_dbg)
             {
@@ -208,8 +251,6 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
             
             i++;
         }
-        
-        f_close(&file);
     }
     
     {

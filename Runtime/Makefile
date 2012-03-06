@@ -8,7 +8,7 @@ NAME = PAWN_APP
 OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	file_selector.o msgbox.o metadata.o debug.o sysmenu.o \
 	fatfs_glue.o ff.o \
-	amx.o amxexec.o amxaux.o amx_debug.o \
+	amx.o amxexec.o amxaux.o amxpool.o amx_debug.o \
 	amx_draw.o amx_core.o amx_string.o amx_fixed.o amx_wavein.o \
 	amx_waveout.o amx_menu.o amx_file.o amx_buttons.o amx_fourier.o \
 	amx_time.o \

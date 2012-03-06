@@ -103,13 +103,14 @@ static void print_hardfault()
     __Clear_Screen(0b0000000000011111);
     __Set(BEEP_VOLUME, 0);
     
-    fprintf(stderr, "   HARDFAULT   \n");
+    fprintf(stderr, "\n\n   HARDFAULT   \n");
     fprintf(stderr, "SP:%08lx PC:%08lx LR:%08lx\n",
             (uint32_t)SP, *(SP + 6), *(SP + 5));
-    fprintf(stderr, "SCB HFSR: %08lx  CFSR: %08lx\n\n", SCB->HFSR, SCB->CFSR);
+    fprintf(stderr, "SCB HFSR:%08lx CFSR:%08lx BFAR:%08lx\n\n",
+            SCB->HFSR, SCB->CFSR, SCB->BFAR);
     
     fprintf(stderr, "R0:%08lx R1:%08lx R2:%08lx R3:%08lx\n",
-            *(SP + 0), *(SP + 1), *(SP + 2), *(SP + 3));
+            SP[0], SP[1], SP[2], SP[3]);
     fprintf(stderr, "R4:%08lx R5:%08lx R6:%08lx R7:%08lx\n",
             R4, R5, R6, R7);
     fprintf(stderr, "R8:%08lx R9:%08lx\n",
@@ -126,7 +127,7 @@ static void print_hardfault()
     while(1);
 }
 
-void __attribute__((noreturn, naked)) HardFaultException()
+void __attribute__((naked)) HardFaultException()
 {
     // Rescue stack pointer and register values
     asm("mrs %0, msp" : "=r"(SP) : :);

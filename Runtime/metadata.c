@@ -32,7 +32,18 @@ static int find_public_function(AMX_HEADER *hdr, FIL *file, const char *name)
         
         if (strncmp(buffer, name, 20) == 0)
         {
-            return func.address;
+            // Found the function, now just parse overlays if any
+            if (hdr->flags & AMX_FLAG_OVERLAY)
+            {
+                int offset;
+                f_lseek(file, hdr->overlays + sizeof(AMX_OVERLAYINFO) * func.address);
+                f_read(file, &offset, sizeof(offset), &bytes);
+                return offset;
+            }
+            else
+            {
+                return func.address;
+            }
         }
     }
     

@@ -170,9 +170,9 @@ static void show_cursor(int index, int color)
     if (index < 0) return;
     
     int x = (index % 4) * SLOT_W;
-    int y = 220 - (index / 4 + 1) * SLOT_H;
+    int y = 219 - (index / 4 + 1) * SLOT_H;
     
-    draw_rectangle(x, y, SLOT_W, SLOT_H, color, 0);
+    draw_rectangle(x, y, SLOT_W, SLOT_H - 2, color, 0);
 }
 
 void select_file(char result[13])
