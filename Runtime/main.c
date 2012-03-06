@@ -15,6 +15,7 @@
 #include "amxaux.h"
 #include "msgbox.h"
 #include "amx_debug.h"
+#include "amx_menu.h"
 
 // For some reason, the headers don't have this register
 #define FSMC_BTR1   (*((vu32 *)(0xA0000000+0x04)))
@@ -32,8 +33,26 @@ int amxinit_string(AMX *amx);
 int amxinit_fixed(AMX *amx);
 int amxinit_wavein(AMX *amx);
 int amxinit_waveout(AMX *amx);
-int amxinit_menu(AMX *amx);
-int amx_menu_doevents(AMX *amx);
+int amxinit_file(AMX *amx);
+int amxinit_buttons(AMX *amx);
+int amxinit_fourier(AMX *amx);
+int amxinit_time(AMX *amx);
+
+register void *stack_pointer asm("sp");
+
+static int debughook(AMX *amx)
+{
+    return AMX_ERR_EXIT;
+}
+
+void TimerTick()
+{
+    uint32_t ms;
+    if (held_keys(BUTTON4, &ms) && ms > 5000)
+    {
+        amx.debug = debughook;
+    }
+}
 
 // Copied from amx.c
 #define NUMENTRIES(hdr,field,nextfield) \
@@ -87,6 +106,10 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_wavein(&amx);
     amxinit_waveout(&amx);
     amxinit_menu(&amx);
+    amxinit_file(&amx);
+    amxinit_buttons(&amx);
+    amxinit_fourier(&amx);
+    amxinit_time(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);
@@ -210,17 +233,20 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
 DECLARE_GPIO(usart1_tx, GPIOA, 9);
 DECLARE_GPIO(usart1_rx, GPIOA, 10);
 
-void draw_app_menu();
-
 int main(void)
 {   
+    static int foo = 12345;
+    
     __Set(BEEP_VOLUME, 0);
+//     while(foo != 0xABCDEF);
+    
     // USART1 8N1 115200bps debug port
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
-    USART1->BRR = ((72000000 / (16 * 115200)) << 4) | 1;
-    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE;
+    USART1->BRR = 72000000 / 115200;
+    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
     gpio_usart1_tx_mode(GPIO_AFOUT_10);
     gpio_usart1_rx_mode(GPIO_HIGHZ_INPUT);
+    printf("\nBoot!\n");
     
     // Reduce the wait states of the FPGA & LCD interface
     // It works for me, hopefully it works for you too :)
@@ -234,7 +260,7 @@ int main(void)
     
     delay_ms(500);
     
-    printf("HEre!\n");
+    printf("HEre! %d\n", foo);
     
     FRESULT status = f_mount(0, &fatfs);
     while (status != FR_OK)
@@ -268,8 +294,6 @@ int main(void)
         }
         else
         {
-            draw_app_menu();
-            
             cell ret;
             status = amx_Exec(&amx, &ret, AMX_EXEC_MAIN);
                 

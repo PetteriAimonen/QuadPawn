@@ -1,0 +1,9 @@
+target sim
+load
+start
+restore memory.dmp binary 0x20000000
+set $pc=CRASHDATA.PC
+set $lr=CRASHDATA.LR
+set $r7=CRASHDATA.R7
+set $sp=CRASHDATA.SP
+

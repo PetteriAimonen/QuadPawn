@@ -25,36 +25,46 @@ int lcd_printf(u16 x0, u16 y0, u16 color, u8 mode, const char *fmt, ...)
     return rv;
 }
 
+bool f_exists(const char *name)
+{
+    FIL file;
+    if (f_open(&file, name, FA_READ | FA_OPEN_EXISTING) != FR_OK)
+        return false;
+    
+    f_close(&file);
+    return true;
+}
+
 // Find a filename that is not in use. Format is a printf format string.
-// char *select_filename(const char *format)
-// {
-//     static char filename[13];
-//     for (int i = 0; i <= 999; i++)
-//     {
-//         snprintf(filename, sizeof(filename), format, i);
-//         if (!_fexists(filename)) break;
-//     }
-//     return filename;
-// }
+char *select_filename(const char *format)
+{
+    static char filename[13];
+    for (int i = 0; i <= 999; i++)
+    {
+        snprintf(filename, sizeof(filename), format, i);
+        if (!f_exists(filename)) break;
+    }
+    return filename;
+}
 
 
 /* ----------------- Bitmap writing ------------ */
 
 // 16-color palette for bitmaps. Could be adjusted per-application to
 // get better looking images.
-static uint16_t palette[16] = {
+const uint32_t bmp_default_palette[16] = {
     RGB565RGB(0,0,0), RGB565RGB(255,255,255), RGB565RGB(128,128,128),
     RGB565RGB(255,0,0), RGB565RGB(0,255,0), RGB565RGB(0,0,255),
     RGB565RGB(255,255,0), RGB565RGB(0,255,255), RGB565RGB(255,0,255),
     RGB565RGB(128,0,0), RGB565RGB(0,128,0), RGB565RGB(0,0,128),
     
     // Following 4 places are used for application-specific colors
-    RGB565RGB(63, 63, 63)
+    RGB565RGB(63, 63, 63), RGB565RGB(0, 0, 63)
 };
 
 // Find the closest color in palette, using Manhattan distance.
 // Comparing in HSV space would be more accurate but slower.
-int quantize(uint16_t color)
+static int quantize(uint16_t color, const uint32_t *palette)
 {
     int min_delta = 999999;
     int closest = 0;
@@ -97,7 +107,7 @@ const uint8_t BMP_HEADER[54] = {
     0x00, 0x00, 0x00, 0x00  // Important colors
 };
 
-bool write_bitmap(const char *filename)
+bool write_bitmap(const char *filename, const uint32_t *palette)
 {
     FIL file;
     
@@ -113,10 +123,13 @@ bool write_bitmap(const char *filename)
     // Write palette
     for (int i = 0; i < 16; i++)
     {
-        f_putc(RGB565_B(palette[i]), &file);
-        f_putc(RGB565_G(palette[i]), &file);
-        f_putc(RGB565_R(palette[i]), &file);
-        f_putc(0, &file);
+        char entry[4] = {
+            RGB565_B(palette[i]),
+            RGB565_G(palette[i]),
+            RGB565_R(palette[i]),
+            0
+        };
+        f_write(&file, entry, sizeof(entry), &bytes);
     }
     
     // Write bitmap data
@@ -125,11 +138,12 @@ bool write_bitmap(const char *filename)
         for (int x = 0; x < 400; x += 2)
         {
             __Point_SCR(x, y);
-            int colorH = quantize(__LCD_GetPixl());
+            int colorH = quantize(__LCD_GetPixl(), palette);
             __Point_SCR(x + 1, y);
-            int colorL = quantize(__LCD_GetPixl());
+            int colorL = quantize(__LCD_GetPixl(), palette);
             
-            f_putc((colorH << 4) | colorL, &file);
+            char byte = (colorH << 4) | colorL;
+            f_write(&file, &byte, 1, &bytes);
         }
     }
     

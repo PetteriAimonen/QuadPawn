@@ -49,7 +49,7 @@ void (* const g_pfnVectors[])(void) = {
     DMA2_Channel2_IRQHandler, DMA2_Channel3_IRQHandler,
     DMA2_Channel4_5_IRQHandler
 };
-
+#include "../ds203_io.h"
 void __Init_Data(void) {
     
     unsigned long *src, *dst;
@@ -66,19 +66,21 @@ void __Init_Data(void) {
         *(dst++) = 0;
     
     /* give rest of the memory to malloc */
-    void *block_start = &_ebss;
-    void *block_end = (void*)&_estack - 4096; // Reserve 4kB for stack
-    add_malloc_block(block_start, block_end - block_start);
+//     void *block_start = &_ebss;
+//     void *block_end = (void*)&_estack - 4096; // Reserve 4kB for stack
+//     add_malloc_block(block_start, block_end - block_start);
 }
 
 register void *stack_pointer asm("sp");
 void Reset_Handler() __attribute__((noreturn, naked));
 void Reset_Handler(void) {
+    
     /* Initialize data and bss */
     stack_pointer = &_estack;
     SCB->VTOR = (u32)g_pfnVectors;
     __Init_Data();
     __USB_Init();
+    
     main();
     while(1) {}
 }

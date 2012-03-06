@@ -30,10 +30,12 @@ __attribute__ ((format (printf, 5, 6)));;
 // Goes through parameters 0 to 999 until a non-existent filename is found.
 // Returns pointer to a static array, so next call will overwrite the value.
 // E.g. select_filename("FILE%03d.CSV") might give "FILE001.CSV".
-// char *select_filename(const char *format);
+
+bool f_exists(const char *name);
+
+char *select_filename(const char *format);
+
+extern const uint32_t bmp_default_palette[16];
 
 // Write current LCD contents as a bitmap into file.
-// (no other file can be open simultaneously)
-// You can add the colours you use to the list in ds203_io.c to make
-// the result look better.
-bool write_bitmap(const char *filename);
+bool write_bitmap(const char *filename, const uint32_t *palette);

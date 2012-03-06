@@ -3,7 +3,6 @@
 #include "buttons.h"
 #include "BIOS.h"
 #include <stm32f10x.h>
-#include "irq.h"
 
 // Milliseconds since boot, good for two months of operation.
 // Also, most functions will handle overflows properly.
@@ -14,6 +13,12 @@ static volatile uint32_t KEYS_LAST_DOWN = 0;
 
 // Flags for keys that have been pressed since the last time they were read
 static volatile uint32_t KEYS_PRESSED = 0;
+
+// Flags for keys that are currently down
+static volatile uint32_t KEYS_DOWN = 0;
+
+// Timestamp when was the last time KEYS_DOWN changed
+static volatile uint32_t KEYS_LAST_CHANGED = 0;
 
 // Debounce time for keys, in milliseconds
 #define DEBOUNCE 10
@@ -32,6 +37,12 @@ void __irq__ TIM3_IRQHandler(void)
     
     if (keys) KEYS_LAST_DOWN = TICKCOUNT;
     
+    if (keys != KEYS_DOWN)
+    {
+        KEYS_DOWN = keys;
+        KEYS_LAST_CHANGED = TICKCOUNT;
+    }
+    
     TimerTick();
 }
 
@@ -47,6 +58,22 @@ uint32_t get_keys(uint32_t mask)
     return __sync_fetch_and_and(&KEYS_PRESSED, ~mask) & mask;
 }
 
+// Check if some keys are being held down
+// Returns the keys that are still down and the number of milliseconds they've
+// been down.
+uint32_t held_keys(uint32_t mask, uint32_t *ticks)
+{
+    uint32_t keys, time;
+    do
+    {
+        time = KEYS_LAST_CHANGED;
+        keys = KEYS_DOWN & mask;
+    } while (time != KEYS_LAST_CHANGED);
+    
+    *ticks = TICKCOUNT - time;
+    return keys;
+}
+
 // Get number of milliseconds passed since boot
 uint32_t get_time()
 {
@@ -55,6 +82,6 @@ uint32_t get_time()
 
 void delay_ms(uint32_t milliseconds)
 {
-    uint32_t end = TICKCOUNT + milliseconds;
-    while (TICKCOUNT < end);
+    uint32_t start = TICKCOUNT;
+    while (TICKCOUNT - start < milliseconds);
 }

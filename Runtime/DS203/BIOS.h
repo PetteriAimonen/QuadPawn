@@ -274,6 +274,8 @@ extern T_attr *T_Attr;
 
 #define always_read(x) asm(""::"r"(x))
 
+#define FPGA_HL_LOW() GPIOC->BRR = (1<<5);
+
 // Seems like we need a bit of delay around the RS changes
 static void LCD_DELAY()
 {

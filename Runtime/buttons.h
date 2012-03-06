@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "irq.h"
 
 /* Functions for accessing the button status and timer ticks, which are
  * updated in a 1ms interval interrupt routine.
@@ -8,13 +9,18 @@
 
 // This can be replaced elsewhere to execute custom code every ms
 // The call will come from an interrupt context.
-void __attribute__((weak)) TimerTick() {};
+void TimerTick(); // {}
 
 // Check if some keys have been pressed, but don't clear the key status.
 uint32_t peek_keys(uint32_t mask);
 
 // Check if some keys have been pressed, and clear the status for them.
 uint32_t get_keys(uint32_t mask);
+
+// Check if some keys are being held down
+// Returns the keys that are still down and the number of milliseconds they've
+// been down.
+uint32_t held_keys(uint32_t mask, uint32_t *ticks);
 
 // Get number of milliseconds passed since boot
 uint32_t get_time();

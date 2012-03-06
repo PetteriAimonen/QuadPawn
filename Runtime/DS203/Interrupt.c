@@ -6,13 +6,6 @@
 #include "BIOS.h"
 #include <stdint.h>
 
-vu32 vu32Tick;
-vu8  Cursor_Cnt, Key_Wait_Cnt, Key_Repeat_Cnt, Key_Buffer, Cnt_mS, Cnt_20mS;
-vu8  Twink, Blink;
-u8   Volume=20, Light;
-vu16 Delay_Cnt, Beep_mS, Key_Status_Last, Sec_Cnt, PD_Cnt;
-vu32 Wait_Cnt; 
-
 void NMIException(void)
 {}
 

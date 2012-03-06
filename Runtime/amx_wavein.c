@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stm32f10x.h>
 #include "mathutils.h"
+#include "utils.h"
 
 static cell AMX_NATIVE_CALL amx_config_chA(AMX *amx, const cell *params)
 {
@@ -45,7 +46,7 @@ static bool trigger_is_unconditional = false;
 
 static cell AMX_NATIVE_CALL amx_wavein_settrigger(AMX *amx, const cell *params)
 {
-    // wavein_trigger(mode, channel, threshold, pulse_time, delay, depth);
+    // wavein_trigger(mode, channel, threshold, pulse_time, delay, interlace);
     __Set_Param(FPGA_SP_TRIGGMODE, params[1] + params[2] * 8);
     __Set_Param(FPGA_SP_VTHRESHOLD, params[3]);
     __Set_Param(FPGA_SP_TTHRESHOLD_L, params[4] & 0xFF);
@@ -54,6 +55,17 @@ static cell AMX_NATIVE_CALL amx_wavein_settrigger(AMX *amx, const cell *params)
     __Set_Param(FPGA_SP_DELAY_2, (params[5] >> 8) & 0xFF);
     __Set_Param(FPGA_SP_DELAY_3, (params[5] >> 16) & 0xFF);
     __Set_Param(FPGA_SP_DELAY_4, (params[5] >> 24) & 0xFF);
+    
+    if (params[6])
+    {
+        __Set_Param(FPGA_SP_CTRLREG, 3); // Interlacing
+        __Set(ADC_MODE, INTERLACE);
+    }
+    else
+    {
+        __Set_Param(FPGA_SP_CTRLREG, 1);
+        __Set(ADC_MODE, SEPARATE);
+    }
     
     trigger_is_unconditional = (params[1] >= 0x20);
     
@@ -64,16 +76,69 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
 {
     // wavein_start(bool: sync = false);
 
+    bool sync = params[1];
+    
     __Set(FIFO_CLR, W_PTR);
     
-    if (trigger_is_unconditional)
+    if (sync)
+    {
+        // Synchronize to waveout
+        if (DAC->CR & DAC_CR_EN1)
+        {
+            // Synchronizing to DAC is easy, as the frequency is at most 1MHz
+            // or so.
+            GPIOB->BSRR = 2;
+            while (DMA2_Channel4->CNDTR != 1);
+            
+            __disable_irq();
+            while (DMA2_Channel4->CNDTR != 1);
+            while (DMA2_Channel4->CNDTR == 1);
+            uint32_t count = DMA2_Channel4->CNDTR;
+            while (DMA2_Channel4->CNDTR == count);
+            GPIOB->BRR = 2;
+            __enable_irq();
+        }
+        else if (TIM4->CR1 & TIM_CR1_CEN)
+        {
+            // Synchronizing to digital output is more difficult, because it
+            // may run at 12MHz or more. This uses DMA to clear the
+            // CLRW pin when TIM4 overflows.
+            GPIOB->BSRR = 2;
+            TIM4->DIER = 0;
+            
+            uint32_t val = 2;
+            DMA1_Channel4->CCR = 0;
+            DMA1_Channel4->CNDTR = 1;
+            DMA1_Channel4->CPAR = (uint32_t)&GPIOB->BRR;
+            DMA1_Channel4->CMAR = (uint32_t)&val;
+            DMA1_Channel4->CCR = 0x3A11;
+            DMA1->IFCR = DMA_IFCR_CTCIF4;
+            
+            TIM4->DIER = TIM_DIER_CC2DE;
+            
+            while (!(DMA1->ISR & DMA_ISR_TCIF4));
+            DMA1_Channel4->CCR = 0;
+        }
+    }
+    
+    if (trigger_is_unconditional || sync)
     {
         while (!__Get(FIFO_START));
         // Get rid of the presamples
-        for (int i = 0; i < 150; i++)
+        for (int i = 0; i < 151; i++)
         {
             while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
             __Read_FIFO();
+        }
+        
+        if (sync)
+        {
+            // Get rid of ADC delay
+            for (int i = 0; i < 5; i++)
+            {
+                while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
+                __Read_FIFO();
+            }
         }
     }
     
@@ -136,13 +201,10 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
     uint32_t **arrays = (uint32_t**)&params[1]; // Array of 4
     int *counts = (int*)&params[5]; // Array of 4
     
-    printf("Start\n");
     while (!__Get(FIFO_START));
-    printf("Started\n");
     
     // If the FIFO is already full, we don't need to do any waiting
     bool full = __Get(FIFO_FULL);
-    printf("Full: %d\n", full);
     
     uint32_t samples[4];
     
@@ -169,6 +231,11 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
             full = __Get(FIFO_FULL);
         }
     } while(mangle_samples(arrays, counts, samples));
+    
+    // I don't even want to think about the reasons why this is needed.
+    // It guards against FIFO accidentally receiving LCD reads, but
+    // it shouldn't be necessary.
+    FPGA_HL_LOW();
     
     return 0;
 }

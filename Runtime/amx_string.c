@@ -25,10 +25,11 @@ static cell AMX_NATIVE_CALL amx_strval(AMX *amx, const cell *params)
 
 static cell AMX_NATIVE_CALL amx_valstr(AMX *amx, const cell *params)
 {
-    // valstr(dest[], value, maxlength = sizeof dest, base = 10);
+    // valstr(dest[], value, maxlength = sizeof dest, base = 10, minlength = 0);
     char dest[36];
     int value = params[2];
     int base = params[4];
+    int minlength = params[5];
     int count = 0;
     
     dest[35] = 0;
@@ -45,19 +46,26 @@ static cell AMX_NATIVE_CALL amx_valstr(AMX *amx, const cell *params)
     }
     else
     {
-        while (value && count++ < maxlength)
+        while (value && count < maxlength)
         {
             int digit = value % base;
             value /= base;
             
             *p-- = (digit < 10) ? (digit + '0') : (digit - 10 + 'A');
-        }
-    
-        if (negative)
-        {
-            *p-- = '-';
             count++;
         }
+    }
+    
+    while (count < minlength)
+    {
+        *p-- = '0';
+        count++;
+    }
+
+    if (negative)
+    {
+        *p-- = '-';
+        count++;
     }
         
     amx_SetString((cell*)params[1], p+1, true, false, params[3]);
