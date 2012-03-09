@@ -27,14 +27,14 @@ const Button:
     BUTTON2             = 0x2000,
     BUTTON3             = 0x0100,
     BUTTON4             = 0x0200,
-
-    SCROLL1_LEFT        = 0x0008,
-    SCROLL1_RIGHT       = 0x8000,
-    SCROLL1_PRESS       = 0x0040,
     
-    SCROLL2_LEFT        = 0x0400,
-    SCROLL2_RIGHT       = 0x0800,
-    SCROLL2_PRESS       = 0x1000,
+    SCROLL1_LEFT        = 0x0400,
+    SCROLL1_RIGHT       = 0x0800,
+    SCROLL1_PRESS       = 0x1000,
+    
+    SCROLL2_LEFT        = 0x0008,
+    SCROLL2_RIGHT       = 0x8000,
+    SCROLL2_PRESS       = 0x0040,
     
     ANY_KEY             = 0xFFFF
 }

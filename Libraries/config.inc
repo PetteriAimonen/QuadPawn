@@ -1,0 +1,224 @@
+/** Configuration dialog & config file library.
+ * 
+ * This uses an internal state machine to control the loading, editing and
+ * saving configuration files. It can be extended with different kinds of
+ * on-screen controls for options.
+ * 
+ * The application code calling this is formulated as a loop:
+ * 
+ * new numfoos, numbars;
+ * start_config("myconf.ini");
+ * while (do_config())
+ * {
+ *     config_header("My config settings");
+ *     config_integer("Number of foos", numfoos, 0, 0, 10);
+ *     config_integer("Number of bars", numbars, 0, -100, 100);
+ * }
+ */
+
+#include <file>
+#include <inifile>
+#include <buttons>
+#include <draw>
+#include <menu>
+
+const ConfigState: {
+    /// The initial configuration state when config is read from a file.
+    config_load = 1,
+    
+    /// Show & edit stage: each control draws itself on the screen and if
+    /// it is selected, also responds to keypresses.
+    config_edit = 2,
+    
+    /// Saving state, just before exiting the dialog.
+    config_save = 3,
+    
+    /// Exit the dialog
+    config_exit = 4
+}
+
+// Constants for the graphical layout
+static const label_column = 5;
+static const value_column = 250;
+static const Color:textcolor = white;
+static const Color:bgcolor = black;
+static const Color:hilight = blue;
+static const rowheight = fontheight;
+
+static ConfigState: config_state;
+static ConfigState: next_state;
+
+/// Currently open configuration file. Closed when do_config returns false.
+static File: config_file;
+
+/// Index of the control that is currently being drawn. Restarts from zero
+/// when do_config() is called.
+static current_index;
+
+/// Index of the currently selected control
+static selected_index = 0;
+
+/// Y-coordinate for the current control
+static current_y;
+
+/// Proceed to next control. Call this at the end of editable control drawing,
+/// but not for headers or other passive elements.
+static next_control(height = 0)
+{
+    current_index++;
+    current_y -= height;
+}
+
+/// Is the current control the selected one? Selected controls should read
+/// keyboard signals.
+static bool:selected() {return current_index == selected_index;}
+
+/// Draw a selection hilight for one row, if appropiate
+static drawbg() {
+    fill_rectangle(0, current_y, 400, rowheight,
+        selected() ? hilight : bgcolor
+    );
+}
+
+stock start_config(const filename{})
+{
+    config_file = f_open(filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
+    next_state = config_load;
+    selected_index = 0;
+    
+    clear_screen(bgcolor);
+    draw_menubar("OK", "Cancel", "", "");
+}
+
+#include <console>
+stock bool:do_config()
+{
+    new max_index;
+    if (config_state == config_edit && next_state == config_edit)
+    {
+        max_index = current_index - 1;
+        get_keys(ANY_KEY);
+        while (!peek_keys(ANY_KEY)) {}
+    }
+    
+    config_state = next_state;
+    
+    if (config_state == config_load)
+    {
+        next_state = config_edit;
+    }
+    else if (config_state == config_edit)
+    {
+        if (get_keys(BUTTON1))
+        {
+            config_state = config_save;
+            next_state = config_exit;
+        }
+        else if (get_keys(BUTTON2))
+        {
+            config_state = config_load;
+            next_state = config_exit;
+        }
+        else if (get_keys(SCROLL2_LEFT))
+        {
+            if (selected_index > 0)
+                selected_index--;
+        }
+        else if (get_keys(SCROLL2_RIGHT))
+        {
+            if (selected_index < max_index)
+                selected_index++;
+        }
+    }
+    else if (config_state == config_exit)
+    {
+//         clear_screen();
+        f_close(config_file);
+        config_file = File:0;
+        return false;
+    }
+    
+    if (config_state == config_load)
+    {
+        f_lseek(config_file, 0);
+    }
+    else if (config_state == config_edit)
+    {
+        current_index = 0;
+        current_y = 200;
+    }
+    else if (config_state == config_save)
+    {
+        f_lseek(config_file, 0);
+        f_truncate(config_file);
+    }
+    
+    return true;
+}
+
+/// An integer configuration setting
+stock config_integer(const id{}, const text{}, 
+                     &variable, defval, minval = cellmin, maxval = cellmax)
+{
+    switch (config_state)
+    {
+        case config_load:
+        {
+            if (!inifile_getint(config_file, id, variable))
+                variable = defval;
+        }
+        
+        case config_edit:
+        {
+            if (selected() && get_keys(SCROLL1_LEFT) && variable > minval)
+                variable--;
+            
+            if (selected() && get_keys(SCROLL1_RIGHT) && variable < maxval)
+                variable++;
+            
+            drawbg();
+            draw_text(text, label_column, current_y, textcolor);
+            draw_text(str(variable), value_column, current_y, textcolor);
+            next_control(rowheight);
+        }
+        
+        case config_save:
+        {
+            inifile_writeint(config_file, id, variable);
+        }
+    }
+}
+
+/// Configuration setting with multiple textual choices
+stock config_multichoice(const id{}, const text{}, 
+                     &variable, const labels[]{}, defval = 0,
+                     count = sizeof labels)
+{
+    switch (config_state)
+    {
+        case config_load:
+        {
+            if (!inifile_getint(config_file, id, variable))
+                variable = defval;
+        }
+        
+        case config_edit:
+        {
+            if (selected() && get_keys(SCROLL1_LEFT) && variable > 0)
+                variable--;
+            
+            if (selected() && get_keys(SCROLL1_RIGHT) && variable < count - 1)
+                variable++;
+            
+            drawbg();
+            draw_text(text, label_column, current_y, textcolor);
+            draw_text(labels[variable], value_column, current_y, textcolor);
+            next_control(rowheight);
+        }
+        
+        case config_save:
+        {
+            inifile_writeint(config_file, id, variable);
+        }
+    }
+}

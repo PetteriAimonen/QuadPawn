@@ -31,7 +31,7 @@ const FileAccess:
 
 /// Open a file. Returns 0 if the operation fails, and a non-zero file id
 /// otherwise.
-native File: f_open(filename{}, FileAccess: mode = FA_READ);
+native File: f_open(const filename{}, FileAccess: mode = FA_READ);
 
 /// Close a file and release any RAM allocated for it.
 /// Returns true if everything succeeds.
@@ -45,27 +45,28 @@ native f_read(File: file, dest{}, count);
 /// Write bytes to file. Returns false if there was any error.
 /// If count is -1, stops on 0 (string terminator) in src. Otherwise
 /// writes exactly count bytes.
-native bool: f_write(File: file, src{}, count = -1);
+native bool: f_write(File: file, const src{}, count = -1);
 
 /// Read a line from file. The result string will not include the trailing
 /// \r or \n. If the buffer is too small, returns 'false' and rest of the
 /// line will be returned on next call.
 stock bool: f_readline(File: file, dest{}, destsize = sizeof dest)
 {
+    new i;
     destsize = destsize * 4 - 1;
-    for (new i = 0; i < destsize; i++)
+    for (i = 0; i < destsize; i++)
     {
         new b{1};
         if (f_read(file, b, 1) != 1) break;
         
-        if (b == '\r') continue;
-        if (b == '\n')
+        if (b{0} == '\r') continue;
+        if (b{0} == '\n')
         {
             dest{i} = 0;
             return true;
         }
         
-        dest{i} = b;
+        dest{i} = b{0};
     }
     
     dest{i} = 0;
@@ -82,8 +83,11 @@ native f_tell(File: file);
 /// Get the size of the file
 native f_size(File: file);
 
+/// Truncate file at current location
+native bool:f_truncate(File: file);
+
 /// Remove a file
-native f_unlink(filename{});
+native f_unlink(const filename{});
 
 /// Get free space in bytes
 native f_getfree();

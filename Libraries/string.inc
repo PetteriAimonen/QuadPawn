@@ -29,6 +29,95 @@ stock strcpy(dest{}, const source{}, maxlength=sizeof dest)
     strcat(dest, source, maxlength);
 }
 
+/// Locate a character in a string. Returns position as 0-based index, or -1
+/// if not found.
+stock strchr(const str{}, character)
+{
+    new pos = 0;
+    while (str{pos} != 0)
+    {
+        if (str{pos} == character) return pos;
+        pos++;
+    }
+    return -1;
+}
+
+/// Get the middle portion of a string
+/// "foobar", 1, 3  =>  "oob"
+stock mid(dest{}, const str{}, start, length)
+{
+    for (new i = 0; i < length; i++)
+    {
+        dest{i} = str{i + start};
+        if (dest{i} == 0) break;
+    }
+    dest{length} = 0;
+}
+
+/// Split the string to two parts by some separator. The initial part is
+/// moved to dest and remaining part is left in the source. The separator
+/// is removed. Returns false if separator is not found or dest is too small.
+stock bool: split(dest{}, source{}, separator{}=" ", maxlength=sizeof dest)
+{
+    maxlength *= 4;
+    maxlength--;
+    
+    new pos = 0;
+    while (strchr(separator, source{pos}) == -1)
+    {
+        if (source{pos} == 0 || maxlength-- < 0)
+        {
+            dest{0} = 0;
+            return false;
+        }
+    
+        dest{pos} = source{pos};
+        pos++;
+    }
+    
+    dest{pos} = 0;
+    
+    pos++; // Remove separator
+    
+    new pos2 = 0;
+    while (source{pos} != 0)
+        source{pos2++} = source{pos++};
+    
+    source{pos2} = 0;
+    return true;
+}
+
+/// Remove any occurrence of chars from the end of string.
+stock rstrip(dest{}, chars{}=" ")
+{
+    new pos = strlen(dest) - 1;
+    
+    while (strchr(chars, dest{pos}) != -1)
+        dest{pos--} = 0;
+}
+
+/// Remove any occurrence of chars from the beginning of string.
+stock lstrip(dest{}, chars{}=" ")
+{
+    new pos = 0;
+    
+    while (strchr(chars, dest{pos}) != -1)
+        pos++;
+    
+    new pos2 = 0;
+    while (dest{pos} != 0)
+        dest{pos2++} = dest{pos++};
+    
+    dest{pos2} = 0;
+}
+
+/// Remove any occurrence of chars from either end of string
+stock strip(dest{}, chars{}=" ")
+{
+    lstrip(dest, chars);
+    rstrip(dest, chars);
+}
+
 /// Convert string to integer, starting at str{index}.
 /// Writes the position of the first non-numeric character in endindex.
 native strval(const str{}, index = 0, &endindex = 0, base = 10);
@@ -65,6 +154,28 @@ stock strf(Fixed: value, decimals = 4)
     valstr(fracpart, fround(frac(value) * scale), .minlength = decimals);
     strcat(result, fracpart);
     
+    return result;
+}
+
+/// Return string converted to fixed point value
+stock Fixed: strfixed(const str{})
+{
+    new pos = 0;
+    new intpart = strval(str, .endindex = pos);
+    
+    new fracpart = 0;
+    
+    if (str{pos} == '.' || str{pos} == ',')
+    {
+        new tmp{5};
+        mid(tmp, str, pos + 1, 4);
+        while (strlen(tmp) < 4) strcat(tmp, "0");
+        
+        fracpart = strval(tmp);
+    }
+    
+    new Fixed: result = fixed(intpart);
+    result = result + fix16_mul(Fixed: fracpart, FIX(6.5536));
     return result;
 }
 
