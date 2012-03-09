@@ -56,7 +56,7 @@ static cell AMX_NATIVE_CALL amx_f_read(AMX *amx, const cell *params)
     if (!file) return 0;
     
     unsigned bytes;
-    FRESULT status = f_read(file, (char*)params[2], params[3] * 4, &bytes);
+    FRESULT status = f_read(file, (char*)params[2], params[3], &bytes);
     
     // Swap the bytes in each cell to convert into Pawn packed string
     cell* p = (cell*)params[2];
@@ -126,6 +126,14 @@ static cell AMX_NATIVE_CALL amx_f_size(AMX *amx, const cell *params)
     return f_size(file);
 }
 
+static cell AMX_NATIVE_CALL amx_f_truncate(AMX *amx, const cell *params)
+{
+    FIL* file = (FIL*)params[1];
+    if (!file) return false;
+
+    return f_truncate(file) == FR_OK;
+}
+
 static cell AMX_NATIVE_CALL amx_f_unlink(AMX *amx, const cell *params)
 {
     char *text;
@@ -170,6 +178,7 @@ int amxinit_file(AMX *amx)
         {"f_lseek", amx_f_lseek},
         {"f_tell", amx_f_tell},
         {"f_size", amx_f_size},
+        {"f_truncate", amx_f_truncate},
         {"f_getfree", amx_f_getfree},
         {"f_opendir", amx_f_opendir},
         {"f_readdir", amx_f_readdir},

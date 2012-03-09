@@ -33,12 +33,12 @@ void delay_ms(uint32_t milliseconds);
 #define BUTTON3        0x0100
 #define BUTTON4        0x0200
 
-#define SCROLL1_LEFT   0x0008
-#define SCROLL1_RIGHT  0x8000
-#define SCROLL1_PRESS  0x0040
+#define SCROLL1_LEFT   0x0400
+#define SCROLL1_RIGHT  0x0800
+#define SCROLL1_PRESS  0x1000
 
-#define SCROLL2_LEFT   0x0400
-#define SCROLL2_RIGHT  0x0800
-#define SCROLL2_PRESS  0x1000
+#define SCROLL2_LEFT   0x0008
+#define SCROLL2_RIGHT  0x8000
+#define SCROLL2_PRESS  0x0040
 
 #define ANY_KEY        0xFFFF
