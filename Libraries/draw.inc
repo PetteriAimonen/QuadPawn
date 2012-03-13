@@ -20,7 +20,11 @@ const Color:
     blue  = RGB(  0,  0,255),
     yellow= RGB(255,255,  0),
     cyan  = RGB(  0,255,255),
-    purple= RGB(255,  0,255)
+    purple= RGB(255,  0,255),
+    
+    darkred = RGB(128, 0, 0),
+    darkgreen = RGB(0, 128, 0),
+    darkblue = RGB(0, 0, 128)
 }
 
 const screenwidth = 400;
@@ -48,6 +52,9 @@ native putpixel(x, y, Color: color);
 
 /// Read pixel value from screen
 native Color: getpixel(x, y);
+
+/// Blend two colors together. Opacity is 0 to 1.
+native Color: blend(Color: fg, Color: bg, Fixed: opacity);
 
 /// Write a vertical column of pixels to screen
 native putcolumn(x, y, const Color: pixels[], count = sizeof pixels);

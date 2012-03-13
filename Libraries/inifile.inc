@@ -6,6 +6,7 @@
 #include <file>
 #include <string>
 #include <console>
+#include <fixed>
 
 /// Read a setting from the ini file. Returns false if the setting was not
 /// found.
@@ -60,4 +61,20 @@ stock bool:inifile_getint(File: file, const optname{}, &value)
 stock inifile_writeint(File: file, const optname{}, value)
 {
     inifile_write(file, optname, str(value));
+}
+
+/// Read a fixed point value
+stock bool:inifile_getfixed(File: file, const optname{}, &Fixed: value)
+{
+    new tmp{10};
+    if (!inifile_get(file, optname, tmp)) return false;
+    
+    value = strfixed(tmp);
+    return true;
+}
+
+/// Write a fixed point value
+stock inifile_writefixed(File: file, const optname{}, Fixed: value)
+{
+    inifile_write(file, optname, strf(value));
 }

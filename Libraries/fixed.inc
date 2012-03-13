@@ -14,6 +14,14 @@
 #pragma rational Decimal(5)
 #define FIX(%1) (Fixed:(_:(%1 * Decimal:65536 + Decimal:50000) / 100000))
 
+// Forbid unimplemented operations on the internal "Decimal" type
+forward operator+(Decimal:oper1, oper2);
+forward operator-(Decimal:oper1, oper2);
+forward operator-(oper1, Decimal:oper2);
+forward operator*(Decimal:oper1, oper2);
+forward operator/(Decimal:oper1, oper2);
+forward operator/(oper1, Decimal:oper2);
+
 const Fixed: pi = FIX(3.14159);
 const Fixed: exp_base = FIX(2.71828);
 const Fixed: fone = FIX(1.0);
@@ -143,6 +151,17 @@ stock Fixed: absf(Fixed: value)
 {
     if (value < 0)
         return -value;
+    else
+        return value;
+}
+
+/// Clamp value to range
+stock Fixed: fclamp(Fixed: value, Fixed: min = fix16_min, Fixed: max = fix16_max)
+{
+    if (value < min)
+        return min;
+    else if (value > max)
+        return max;
     else
         return value;
 }

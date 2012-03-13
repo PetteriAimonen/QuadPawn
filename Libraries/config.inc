@@ -10,16 +10,17 @@
  * start_config("myconf.ini");
  * while (do_config())
  * {
- *     config_header("My config settings");
- *     config_integer("Number of foos", numfoos, 0, 0, 10);
- *     config_integer("Number of bars", numbars, 0, -100, 100);
+ *     config_integer("numfoos", "Number of foos", numfoos, 0, 0, 10);
+ *     config_integer("numbars", "Number of bars", numbars, 0, -100, 100);
  * }
  */
 
 #include <file>
 #include <inifile>
 #include <buttons>
+#include <fixed>
 #include <draw>
+#include <core>
 #include <menu>
 
 const ConfigState: {
@@ -45,7 +46,7 @@ static const Color:bgcolor = black;
 static const Color:hilight = blue;
 static const rowheight = fontheight;
 
-static ConfigState: config_state;
+new ConfigState: config_state;
 static ConfigState: next_state;
 
 /// Currently open configuration file. Closed when do_config returns false.
@@ -90,12 +91,14 @@ stock start_config(const filename{})
     draw_menubar("OK", "Cancel", "", "");
 }
 
-#include <console>
 stock bool:do_config()
 {
     new max_index;
     if (config_state == config_edit && next_state == config_edit)
     {
+        // Fill the rest of the screen with black to clear any leftovers
+        fill_rectangle(0, 0, 400, current_y + rowheight, bgcolor);
+        
         max_index = current_index - 1;
         get_keys(ANY_KEY);
         while (!peek_keys(ANY_KEY)) {}
@@ -121,14 +124,14 @@ stock bool:do_config()
         }
         else if (get_keys(SCROLL2_LEFT))
         {
-            if (selected_index > 0)
                 selected_index--;
         }
         else if (get_keys(SCROLL2_RIGHT))
         {
-            if (selected_index < max_index)
                 selected_index++;
         }
+        
+        selected_index = clamp(selected_index, 0, max_index);
     }
     else if (config_state == config_exit)
     {
@@ -170,11 +173,13 @@ stock config_integer(const id{}, const text{},
         
         case config_edit:
         {
-            if (selected() && get_keys(SCROLL1_LEFT) && variable > minval)
-                variable--;
+            if (selected() && get_keys(SCROLL1_LEFT))
+                variable -= scroller_speed();
             
-            if (selected() && get_keys(SCROLL1_RIGHT) && variable < maxval)
-                variable++;
+            if (selected() && get_keys(SCROLL1_RIGHT))
+                variable += scroller_speed();
+            
+            variable = clamp(variable, minval, maxval);
             
             drawbg();
             draw_text(text, label_column, current_y, textcolor);
@@ -185,6 +190,43 @@ stock config_integer(const id{}, const text{},
         case config_save:
         {
             inifile_writeint(config_file, id, variable);
+        }
+    }
+}
+
+/// An fixed-point configuration setting
+stock config_fixed(const id{}, const text{}, 
+                    &Fixed:variable, Fixed: defval, Fixed: increment = FIX(0.01),
+                    Fixed: minval = fix16_min, Fixed: maxval = fix16_max)
+{
+    switch (config_state)
+    {
+        case config_load:
+        {
+            if (!inifile_getfixed(config_file, id, variable))
+                variable = defval;
+        }
+        
+        case config_edit:
+        {
+            if (selected() && get_keys(SCROLL1_LEFT))
+                variable -= scroller_speed() * increment;
+            
+            if (selected() && get_keys(SCROLL1_RIGHT))
+                variable += scroller_speed() * increment;
+            
+            variable = fclamp(variable, minval, maxval);
+            variable = increment * fround(variable / increment);
+            
+            drawbg();
+            draw_text(text, label_column, current_y, textcolor);
+            draw_text(strf(variable), value_column, current_y, textcolor);
+            next_control(rowheight);
+        }
+        
+        case config_save:
+        {
+            inifile_writefixed(config_file, id, variable);
         }
     }
 }
@@ -204,11 +246,13 @@ stock config_multichoice(const id{}, const text{},
         
         case config_edit:
         {
-            if (selected() && get_keys(SCROLL1_LEFT) && variable > 0)
+            if (selected() && get_keys(SCROLL1_LEFT))
                 variable--;
             
-            if (selected() && get_keys(SCROLL1_RIGHT) && variable < count - 1)
+            if (selected() && get_keys(SCROLL1_RIGHT))
                 variable++;
+            
+            variable = clamp(variable, 0, count - 1);
             
             drawbg();
             draw_text(text, label_column, current_y, textcolor);

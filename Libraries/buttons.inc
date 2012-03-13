@@ -21,7 +21,7 @@
 
 /// Flags for querying the status of buttons. Multiple flags can
 /// be combined using | operator.
-const Button:
+const button:
 {
     BUTTON1             = 0x4000,
     BUTTON2             = 0x2000,
@@ -41,22 +41,26 @@ const Button:
 
 /// Check if some keys have been pressed, but don't clear the key status.
 /// Returns the keys that were pressed or 0 if no buttons were pressed.
-native peek_keys(Button: keys);
+native button: peek_keys(button: keys);
 
 /// Check if some keys have been pressed, and clear the status for them.
-native get_keys(Button: keys);
+native button: get_keys(button: keys);
 
 /// Check if some keys are being held down.
 /// Returns the keys that are down and writes to variable the number of
 /// milliseconds they've been down. Pressing another button while one key
 /// is down resets the count.
-native held_keys(Button: keys, &milliseconds = 0);
+native button: held_keys(button: keys, &milliseconds = 0);
+
+/// Get the scroller increment based on held_keys time. This achieves
+/// incremental acceleration.
+native scroller_speed();
 
 #include <time>
 
 /// Wait the specified number of milliseconds, but abort the wait if a button
 /// is pressed.
-stock wait_keys(Button: keys, milliseconds)
+stock wait_keys(button: keys, milliseconds)
 {
     new start = get_time();
     while (get_time() - start < milliseconds && !peek_keys(keys)) {}

@@ -175,7 +175,7 @@ stock Fixed: strfixed(const str{})
     }
     
     new Fixed: result = fixed(intpart);
-    result = result + fix16_mul(Fixed: fracpart, FIX(6.5536));
+    result = result + fracpart * FIX(6.5536);
     return result;
 }
 
