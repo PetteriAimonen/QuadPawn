@@ -11,6 +11,7 @@
 typedef struct {
     AMX_DBG_HDR header;
     FIL *file;
+    const AMX *amx;
     
     // Offsets to the tables, relative to file start
     unsigned filetbl_offset;
@@ -21,7 +22,7 @@ typedef struct {
 // Load the debug header and find table locations in the file
 // Note: the file pointer is stored in dbg, so dbg will be invalid
 // once the file is closed.
-bool amxdbg_load(FIL* file, AMX_DEBUG_INFO *dbg);
+bool amxdbg_load(FIL* file, const AMX* amx, AMX_DEBUG_INFO *dbg);
 
 // Find the file and line that correspond to given instruction
 bool amxdbg_find_location(AMX_DEBUG_INFO *dbg, unsigned instruction_pointer,
@@ -29,7 +30,7 @@ bool amxdbg_find_location(AMX_DEBUG_INFO *dbg, unsigned instruction_pointer,
 
 // Format locals and their values to a string
 bool amxdbg_format_locals(AMX_DEBUG_INFO *dbg, AMX *amx,
-                          unsigned frame, unsigned instruction,
+                          unsigned frame, unsigned instruction_pointer,
                           char *dest, int dest_size);
 
 // Get the previous caller from the call stack and the frame pointer of it

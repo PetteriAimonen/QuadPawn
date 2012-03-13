@@ -18,6 +18,8 @@ void draw_text(const char *text, int x, int y, int fg, int bg, bool center);
 // Returns number of lines in the text
 int draw_flowtext(const char *text, int x, int y, int w, int h, int fg, int bg, bool center);
 
+int blend(int fg, int bg, int alpha);
+
 void drawline_aa(fix16_t fx1, fix16_t fy1, fix16_t fx2, fix16_t fy2, int color);
 
 void drawline(int x1, int y1, int x2, int y2, int color, int dots);

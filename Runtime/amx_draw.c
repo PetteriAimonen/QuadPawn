@@ -50,6 +50,15 @@ static cell AMX_NATIVE_CALL amx_getpixel(AMX *amx, const cell *params)
     return __LCD_GetPixl();
 }
 
+static cell AMX_NATIVE_CALL amx_blend(AMX *amx, const cell *params)
+{
+    int fg = params[1];
+    int bg = params[2];
+    fix16_t opacity = params[3];
+    
+    return blend(fg, bg, opacity >> 8);
+}
+
 static cell AMX_NATIVE_CALL amx_putcolumn(AMX *amx, const cell *params)
 {
     // putcolumn(x, y, const pixels[], count);
@@ -156,6 +165,7 @@ int amxinit_display(AMX *amx)
         {"fill_rectangle", amx_fill_rectangle},
         {"putpixel", amx_putpixel},
         {"getpixel", amx_getpixel},
+        {"blend", amx_blend},
         {"putcolumn", amx_putcolumn},
         {"getcolumn", amx_getcolumn},
         {"drawline_aa", amx_drawline_aa},

@@ -29,7 +29,7 @@ AMX amx;
 FIL amx_file;
 
 // Data block allocated for the virtual machine
-uint8_t vm_data[30000];
+uint8_t vm_data[32768];
 
 int amxinit_display(AMX *amx);
 int amx_CoreInit(AMX *amx);
@@ -195,8 +195,15 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
     p += snprintf(p, REMAINING, "Virtual machine error: %s\n",
                   aux_StrError(return_status));
     
-    p += snprintf(p, REMAINING, "CIP: %08lx PRI: %08lx ALT: %08lx\n\n",
+    p += snprintf(p, REMAINING, "CIP: %08lx PRI: %08lx ALT: %08lx\n",
                   amx->cip, amx->pri, amx->alt);
+    
+    if (hdr->flags & AMX_FLAG_OVERLAY)
+    {
+        p += snprintf(p, REMAINING, "Current overlay index: %d\n", amx->ovl_index);
+    }
+    
+    p += snprintf(p, REMAINING, "\n");
     
     {
         FIL *file = &amx_file;
@@ -210,7 +217,7 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
         }
         else
         {
-            have_dbg = amxdbg_load(file, &dbg);
+            have_dbg = amxdbg_load(file, amx, &dbg);
             
             if (!have_dbg)
             {
@@ -220,12 +227,19 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
         
         if (have_dbg)
         {
-            if (amxdbg_find_location(&dbg, amx->cip, tmp, sizeof(tmp)))
+            unsigned location = amx->cip;
+            
+            if (hdr->flags & AMX_FLAG_OVERLAY)
+            {
+                location = (amx->cip << 16) | amx->ovl_index;
+            }
+            
+            if (amxdbg_find_location(&dbg, location, tmp, sizeof(tmp)))
             {
                 p += snprintf(p, REMAINING, "Location: %s\n", tmp);
             }
             
-            if (amxdbg_format_locals(&dbg, amx, amx->frm, amx->cip, tmp, sizeof(tmp)))
+            if (amxdbg_format_locals(&dbg, amx, amx->frm, location, tmp, sizeof(tmp)))
             {
                 p += snprintf(p, REMAINING, "   %s\n", tmp);
             }
@@ -276,10 +290,7 @@ DECLARE_GPIO(usart1_rx, GPIOA, 10);
 
 int main(void)
 {   
-    static int foo = 12345;
-    
     __Set(BEEP_VOLUME, 0);
-//     while(foo != 0xABCDEF);
     
     // USART1 8N1 115200bps debug port
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
@@ -297,12 +308,6 @@ int main(void)
     __Set(ADC_CTRL, EN);       
     __Set(ADC_MODE, SEPARATE);
     
-    debugf("Here!");
-    
-    delay_ms(500);
-    
-    printf("HEre! %d\n", foo);
-    
     FRESULT status = f_mount(0, &fatfs);
     while (status != FR_OK)
     {
@@ -318,6 +323,7 @@ int main(void)
         char filename[13];
         select_file(filename);
         
+        get_keys(ANY_KEY);
         __Clear_Screen(0);
         
         char error[50] = {0};
@@ -335,6 +341,9 @@ int main(void)
         }
         else
         {
+            int idle_func = -1;
+            if (amx_FindPublic(&amx, "@idle", &idle_func) != 0) idle_func = -1;
+            
             cell ret;
             status = amx_Exec(&amx, &ret, AMX_EXEC_MAIN);
                 
@@ -350,6 +359,17 @@ int main(void)
                     status = amx_Exec(&amx, &ret, AMX_EXEC_CONT);
                 else
                     amx = nested_amx; // Report errors properly
+            }
+            
+            if (status == 0 && idle_func != -1)
+            {
+                // Main() exited, keep running idle function.
+                do {
+                    status = doevents(&amx);
+                    
+                    if (status == 0)
+                        status = amx_Exec(&amx, &ret, idle_func);
+                } while (status == 0 && ret != 0);
             }
             
             if (status != 0)

@@ -23,6 +23,11 @@ static volatile uint32_t KEYS_LAST_CHANGED = 0;
 // Debounce time for keys, in milliseconds
 #define DEBOUNCE 10
 
+// Repeat time for scroller keys
+#define REPEAT_DELAY 300
+#define REPEAT_PERIOD 100
+#define REPEAT_KEYS (SCROLL1_LEFT | SCROLL1_RIGHT | SCROLL2_LEFT | SCROLL2_RIGHT)
+
 void __irq__ TIM3_IRQHandler(void)
 { 
     TIM3->SR = 0; // Clear interrupt flag
@@ -41,6 +46,13 @@ void __irq__ TIM3_IRQHandler(void)
     {
         KEYS_DOWN = keys;
         KEYS_LAST_CHANGED = TICKCOUNT;
+    }
+    
+    uint32_t time_down = TICKCOUNT - KEYS_LAST_CHANGED;
+    if (time_down > REPEAT_DELAY && (keys & REPEAT_KEYS))
+    {
+        if ((time_down - REPEAT_DELAY) % REPEAT_PERIOD == 0)
+            KEYS_PRESSED |= (keys & REPEAT_KEYS);
     }
     
     TimerTick();
@@ -85,3 +97,21 @@ void delay_ms(uint32_t milliseconds)
     uint32_t start = TICKCOUNT;
     while (TICKCOUNT - start < milliseconds);
 }
+
+#include <fix16.h>
+
+int scroller_speed()
+{
+    uint32_t time;
+    held_keys(ANY_KEY, &time);
+    
+    if (time < 500)
+        return 1;
+    
+    if (time > 10000)
+        time = 10000;
+    
+    fix16_t a = fix16_div(fix16_from_int(time), fix16_from_int(2171));
+    return 1 + fix16_to_int(fix16_exp(a));
+}
+

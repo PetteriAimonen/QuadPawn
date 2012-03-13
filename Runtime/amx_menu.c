@@ -9,7 +9,7 @@
 #include "amx_menu.h"
 #include "ds203_io.h"
 
-int b1_func, b2_func, b3_func, b4_func;
+int b1_func, b2_func, b3_func, b4_func, s1_func, s2_func;
 
 static cell AMX_NATIVE_CALL amx_draw_menubar(AMX *amx, const cell *params)
 {
@@ -25,7 +25,7 @@ static cell AMX_NATIVE_CALL amx_draw_menubar(AMX *amx, const cell *params)
 
 int amx_menu_doevents(AMX *amx)
 {
-    if (!peek_keys(BUTTON1 | BUTTON2 | BUTTON3 | BUTTON4))
+    if (!peek_keys(ANY_KEY))
         return 0;
 
     int status;
@@ -55,6 +55,38 @@ int amx_menu_doevents(AMX *amx)
         if (status != 0) return status;
     }
     
+    if (s1_func != -1 && peek_keys(SCROLL1_PRESS | SCROLL1_LEFT | SCROLL1_RIGHT))
+    {
+        int param = 0;
+        
+        if (get_keys(SCROLL1_PRESS))
+            param = 0;
+        else if (get_keys(SCROLL1_LEFT))
+            param = -scroller_speed();
+        else if (get_keys(SCROLL1_RIGHT))
+            param = scroller_speed();
+        
+        amx_Push(amx, param);
+        status = amx_Exec(amx, &retval, s1_func);
+        if (status != 0) return status;
+    }
+    
+    if (s2_func != -1 && peek_keys(SCROLL2_PRESS | SCROLL2_LEFT | SCROLL2_RIGHT))
+    {
+        int param = 0;
+        
+        if (get_keys(SCROLL2_PRESS))
+            param = 0;
+        else if (get_keys(SCROLL2_LEFT))
+            param = -scroller_speed();
+        else if (get_keys(SCROLL2_RIGHT))
+            param = scroller_speed();
+        
+        amx_Push(amx, param);
+        status = amx_Exec(amx, &retval, s2_func);
+        if (status != 0) return status;
+    }
+    
     return 0;
 }
 
@@ -76,6 +108,12 @@ int amxinit_menu(AMX *amx)
     
     if (amx_FindPublic(amx, "@button4", &b4_func) != 0)
         b4_func = -1;
+    
+    if (amx_FindPublic(amx, "@scroll1", &s1_func) != 0)
+        s1_func = -1;
+    
+    if (amx_FindPublic(amx, "@scroll2", &s2_func) != 0)
+        s2_func = -1;
     
     return amx_Register(amx, funcs, -1);
 }

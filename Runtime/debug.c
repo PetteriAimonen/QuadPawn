@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "stm32f10x.h"
 #include "ff.h"
+#include "irq.h"
 
 /* Memory dumps */
 
@@ -98,10 +99,11 @@ void __assert_fail(const char *assert, const char *file, unsigned int line)
 static uint32_t *SP;
 static uint32_t R4, R5, R6, R7, R8, R9, R10, R11;
 
-static void print_hardfault()
+void __irq__ print_hardfault()
 {
     __Clear_Screen(0b0000000000011111);
     __Set(BEEP_VOLUME, 0);
+    
     
     fprintf(stderr, "\n\n   HARDFAULT   \n");
     fprintf(stderr, "SP:%08lx PC:%08lx LR:%08lx\n",

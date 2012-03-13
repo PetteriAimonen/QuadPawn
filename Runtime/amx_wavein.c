@@ -118,6 +118,7 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
             
             while (!(DMA1->ISR & DMA_ISR_TCIF4));
             DMA1_Channel4->CCR = 0;
+            TIM4->DIER = 0;
         }
     }
     

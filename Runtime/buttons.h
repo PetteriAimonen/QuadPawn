@@ -28,6 +28,10 @@ uint32_t get_time();
 // Delay a specified number of milliseconds in a while loop
 void delay_ms(uint32_t milliseconds);
 
+// Get scroller increment based on held_keys time. This achieves incremental
+// acceleration.
+int scroller_speed();
+
 #define BUTTON1        0x4000    
 #define BUTTON2        0x2000    
 #define BUTTON3        0x0100

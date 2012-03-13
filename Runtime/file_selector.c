@@ -206,10 +206,10 @@ void select_file(char result[13])
             show_cursor(index, 0);
             
             // Update index
-            if (get_keys(SCROLL1_LEFT)) index -= 1;
-            if (get_keys(SCROLL1_RIGHT)) index += 1;
-            if (get_keys(SCROLL2_LEFT)) index -= 4;
-            if (get_keys(SCROLL2_RIGHT)) index += 4;
+            if (get_keys(SCROLL1_LEFT)) index -= 4;
+            if (get_keys(SCROLL1_RIGHT)) index += 4;
+            if (get_keys(SCROLL2_LEFT)) index -= 1;
+            if (get_keys(SCROLL2_RIGHT)) index += 1;
             
             if (index < 0)
             {

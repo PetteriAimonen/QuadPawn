@@ -59,12 +59,32 @@ static bool read_symboltbl(FIL *file, AMX_DBG_SYMBOL *symbol)
     return true;
 }
 
-bool amxdbg_load(FIL* file, AMX_DEBUG_INFO *dbg)
+// Convert a (possibly) overlay address into linear offset from hdr->cod
+// in the file.
+static unsigned linear_address(const AMX* amx, unsigned instruction_pointer)
+{
+    AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
+    if (hdr->flags & AMX_FLAG_OVERLAY)
+    {
+        int overlay_idx = instruction_pointer & 0xFFFF;
+        unsigned overlay_rel = instruction_pointer >> 16;
+        
+        AMX_OVERLAYINFO *tbl = (AMX_OVERLAYINFO*)(amx->base + hdr->overlays);
+        return tbl[overlay_idx].offset + overlay_rel;
+    }
+    else
+    {
+        return instruction_pointer;
+    }
+}
+
+bool amxdbg_load(FIL* file, const AMX *amx, AMX_DEBUG_INFO *dbg)
 {
     unsigned debug_start;
     unsigned bytes;
     
     dbg->file = file;
+    dbg->amx = amx;
     
     // Read the file size from the main AMX header and use that to seek
     // to the debug data.
@@ -97,6 +117,8 @@ bool amxdbg_find_location(AMX_DEBUG_INFO *dbg, unsigned instruction_pointer,
                           char *location, unsigned location_size)
 {
     unsigned bytes, address;
+    
+    instruction_pointer = linear_address(dbg->amx, instruction_pointer);
     
     // Find filename
     f_lseek(dbg->file, dbg->filetbl_offset);
@@ -167,12 +189,14 @@ bool amxdbg_find_location(AMX_DEBUG_INFO *dbg, unsigned instruction_pointer,
 }
 
 bool amxdbg_format_locals(AMX_DEBUG_INFO *dbg, AMX *amx,
-                          unsigned frame, unsigned instruction,
+                          unsigned frame, unsigned instruction_pointer,
                           char *dest, int dest_size)
 {
     AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
-    cell *dat = (cell*)(amx->base + hdr->dat);
+    cell *dat = (cell*)((amx->data!=NULL) ? amx->data : amx->base+(int)hdr->dat);
     unsigned frm = frame / 4;
+    
+    instruction_pointer = linear_address(dbg->amx, instruction_pointer);
     
     dest[0] = 0;
     
@@ -185,8 +209,8 @@ bool amxdbg_format_locals(AMX_DEBUG_INFO *dbg, AMX *amx,
         
         if (symbol.ident == iVARIABLE
             && symbol.vclass != 0
-            && symbol.codestart <= instruction
-            && symbol.codeend > instruction)
+            && symbol.codestart <= instruction_pointer
+            && symbol.codeend > instruction_pointer)
         {
             cell value;
             if (symbol.vclass == 1)
@@ -207,7 +231,7 @@ bool amxdbg_format_locals(AMX_DEBUG_INFO *dbg, AMX *amx,
 unsigned amxdbg_get_caller(AMX *amx, unsigned *frame)
 {
     AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
-    cell *dat = (cell*)(amx->base + hdr->dat);
+    cell *dat = (cell*)((amx->data!=NULL) ? amx->data : amx->base+(int)hdr->dat);
     
     unsigned frm = *frame / 4;
     unsigned addr = dat[frm + 1];

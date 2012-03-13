@@ -115,23 +115,31 @@ int draw_flowtext(const char *text, int x, int y, int w, int h, int fg, int bg, 
 
 /* Antialiased line drawing */
 
-// Alpha-blend two colors together, helper for drawline.
-static u16 adjust_alpha(u16 newcolor, u16 oldcolor, int alpha)
+// Alpha-blend two colors together. Alpha is 0 to 255.
+// The ratios have been biased a bit to make the result look
+// better on a cheap TFT.
+int blend(int fg, int bg, int alpha)
 {
-    alpha = 256 - (256 - alpha) * 2 / 3; // To make it look better on cheap TFT :)
-    int invalpha = 256 - alpha;
+    int fg_per_2 = (fg & 0xF7DE) >> 1;
+    int fg_per_4 = (fg & 0xE79C) >> 2;
+    int fg_per_8 = (fg & 0xC718) >> 3;
     
-    int r = RGB565_R(newcolor);
-    int g = RGB565_G(newcolor);
-    int b = RGB565_B(newcolor);
-    int oldr = RGB565_R(oldcolor);
-    int oldg = RGB565_G(oldcolor);
-    int oldb = RGB565_B(oldcolor);
+    int bg_per_2 = (bg & 0xF7DE) >> 1;
+    int bg_per_4 = (bg & 0xE79C) >> 2;
+    int bg_per_8 = (bg & 0xC718) >> 3;
     
-    r = (r * alpha + oldr * invalpha) / 256;
-    g = (g * alpha + oldg * invalpha) / 256;
-    b = (b * alpha + oldb * invalpha) / 256;
-    return RGB565RGB(r, g, b);
+    if (alpha > 224)
+        return fg; // 100% blend
+    else if (alpha > 192)
+        return (fg - fg_per_8 + bg_per_8); // 88% blend
+    else if (alpha > 128)
+        return (fg - fg_per_4 + bg_per_4); // 75% blend
+    else if (alpha > 64)
+        return (fg_per_2 + bg_per_2); // 50% blend
+    else if (alpha > 32)
+        return (fg_per_4 + bg - bg_per_4); // 25% blend
+    else
+        return bg; // 0% blend
 }
 
 // Draws antialiased lines
@@ -153,7 +161,7 @@ void drawline_aa(fix16_t fx1, fix16_t fy1, fix16_t fx2, fix16_t fy2, int color)
         
         __Point_SCR(x >> 8, y >> 8);
         u16 oldcolor = __LCD_GetPixl();
-        __LCD_SetPixl(adjust_alpha(color, oldcolor, c));
+        __LCD_SetPixl(blend(color, oldcolor, c));
     }
     
     // Integer part of x

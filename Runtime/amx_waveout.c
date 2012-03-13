@@ -38,6 +38,8 @@ static cell AMX_NATIVE_CALL amx_waveout_digital(AMX *amx, const cell *params)
     int arr = div_round_up(CPUFREQ / (prescale + 1), frequency) - 1;
     int ccr = fix16_mul(duty, arr + 1);
     
+    if (arr == 0) return 0;
+    
     __Set(DIGTAL_ARR, arr);
     __Set(DIGTAL_PSC, prescale);
     __Set(DIGTAL_CCR, ccr);

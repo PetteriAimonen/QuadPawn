@@ -428,7 +428,7 @@ amx_exec_run:
     @ r1  = ALT
     @ r2  = STP (stack top), relocated (absolute address)
     @ r3  = HEA, relocated (absolute address)
-    @ r4  = CIP
+    @ r4  = CIP./pawncc -d2 -v2 signlgen.p
     @ r5  = data section (passed in r2)
     @ r6  = STK, relocated (absolute address)
     @ r7  = FRM, relocated (absolute address)
@@ -762,7 +762,9 @@ amx_exec_run:
     itt eq
     moveq r11, #AMX_ERR_DIVIDE  @ r0 == 0 -> set error code
     beq .amx_exit               @ r0 == 0 -> jump to error-exit
-    sdiv r0, r1, r0;
+    mov r11, r0
+    sdiv r0, r1, r0
+    mls r1, r0, r11, r1
 
 @    stmfd sp!, {r2 - r3, lr}    @ need two more scratch registers
 @    @ save input registers and create absolute values

@@ -8,12 +8,13 @@
 
 void show_msgbox(const char *title, const char *message)
 {
-    show_question("Close", "", title, "", message);
+    show_question("Close", " ", title, " ", message);
 }
 
 int show_question(const char *opt1, const char *opt2, const char *opt3,
                    const char *opt4, const char *message)
 {
+    get_keys(ANY_KEY); // Clear key buffer
     __Clear_Screen(0);
     
     draw_menubar(opt1, opt2, opt3, opt4);
@@ -33,7 +34,7 @@ int show_question(const char *opt1, const char *opt2, const char *opt3,
     }
     
     __Clear_Screen(0);
-    get_keys(ALL_KEYS); // Clear key buffer
+    get_keys(ANY_KEY); // Clear key buffer
     
     return option;
 }
