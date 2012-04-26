@@ -22,6 +22,17 @@ static cell AMX_NATIVE_CALL amx_draw_text(AMX *amx, const cell *params)
     return 0;
 }
 
+static cell AMX_NATIVE_CALL amx_draw_flowtext(AMX *amx, const cell *params)
+{
+    char *text;
+    amx_StrParam(amx, params[1], text);
+    
+    draw_flowtext(text, params[2], params[3], params[4], params[5], params[6], params[7], params[8]);
+    
+    return 0;
+}
+
+
 static cell AMX_NATIVE_CALL amx_lcd_type(AMX *amx, const cell *params)
 {
     return LCD_RD_Type();
@@ -61,7 +72,7 @@ static cell AMX_NATIVE_CALL amx_blend(AMX *amx, const cell *params)
 
 static cell AMX_NATIVE_CALL amx_putcolumn(AMX *amx, const cell *params)
 {
-    // putcolumn(x, y, const pixels[], count);
+    // putcolumn(x, y, const pixels[], count, wait);
     __Point_SCR(params[1], params[2]);
     
     cell *pixels = (cell*)params[3];
@@ -74,9 +85,10 @@ static cell AMX_NATIVE_CALL amx_putcolumn(AMX *amx, const cell *params)
     DMA2_Channel1->CNDTR = count;
     DMA2_Channel1->CCR = 0x5991;
     
-    // Because caller is free to release array as soon as we return,
-    // we instead wait here..
-    __LCD_DMA_Ready();
+    if (params[4])
+    {
+        __LCD_DMA_Ready();
+    }
     
     return 0;
 }
@@ -161,6 +173,7 @@ int amxinit_display(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
         {"draw_text", amx_draw_text},
+        {"draw_flowtext", amx_draw_flowtext},
         {"lcd_type", amx_lcd_type},
         {"fill_rectangle", amx_fill_rectangle},
         {"putpixel", amx_putpixel},

@@ -93,6 +93,7 @@ build/%.o: DS203/%.S
 deploy: $(NAME).HEX
 	mount /mnt/dso
 	cp $< /mnt/dso
+	sync
 	umount /mnt/dso
 
 

@@ -5,6 +5,92 @@
 
 #include "diskio.h"
 #include "BIOS.h"
+#include "gpio.h"
+
+/* SPI access routines */
+DECLARE_GPIO(cs, GPIOB, 7);
+
+static void spi_send(uint8_t byte)
+{
+    while (!(SPI3->SR & SPI_SR_TXE));
+    SPI3->DR = byte;
+}
+
+static uint8_t spi_recv()
+{
+    while (!(SPI3->SR & SPI_SR_TXE));
+    while (SPI3->SR & SPI_SR_BSY); // Wait for previous byte transmission
+    always_read(SPI3->DR); // Clear RXNE & overflow flags
+    always_read(SPI3->SR);
+    SPI3->DR = 0xFF;
+    while (!(SPI3->SR & SPI_SR_RXNE));
+    return SPI3->DR;
+}
+
+static void spi_recv_block(uint8_t *buffer, unsigned count)
+{
+    while (!(SPI3->SR & SPI_SR_TXE));
+    while (SPI3->SR & SPI_SR_BSY); // Wait for previous byte transmission
+    always_read(SPI3->DR); // Clear RXNE & overflow flags
+    always_read(SPI3->SR);
+    
+    SPI3->DR = 0xFF;
+    while (count--)
+    {
+        while (!(SPI3->SR & SPI_SR_TXE));
+        
+        __disable_irq(); // Interrupt in here could cause RX overflow
+        SPI3->DR = 0xFF;
+        while (!(SPI3->SR & SPI_SR_RXNE));
+        *buffer++ = SPI3->DR ^ 0xFF; // DSO Quad stores the inverse of bytes
+        __enable_irq();
+    }
+}
+
+/* Flash (M25PE16) access routines (faster than the BIOS versions) */
+
+#define WREN       0x06  // Write enable instruction 
+#define READ       0x03  // Read from Memory instruction 
+#define RDSR       0x05  // Read Status Register instruction  
+#define PP         0x02  // Write to Memory instruction 
+#define PE         0xDB  // Page Erase instruction 
+#define PW         0x0A  // Page write instruction 
+#define DP         0xB9  // Deep power-down instruction 
+#define RDP        0xAB  // Release from deep power-down instruction 
+#define WIP_Flag   0x01  // Write In Progress (WIP) flag 
+
+static void wait_for_write_end()
+{
+    gpio_cs_set(0);
+    spi_send(RDSR);
+    while (spi_recv() & WIP_Flag);
+    gpio_cs_set(1);
+}
+
+static void read_flash(uint8_t *buffer, unsigned addr, unsigned count)
+{
+    // USB accesses may disturb our reads. We detect this by checking
+    // CS after transfer.
+    do {
+        gpio_cs_set(1);
+        wait_for_write_end();
+        
+        gpio_cs_set(0);
+        
+        spi_send(READ);
+        spi_send((addr >> 16) & 0xFF);
+        spi_send((addr >> 8) & 0xFF);
+        spi_send(addr & 0xFF);
+    
+        spi_recv_block(buffer, count);
+    
+        spi_recv();
+    } while (gpio_cs_get());
+    
+    gpio_cs_set(1);
+}
+
+/* FatFS hook implementations */
 
 DSTATUS disk_initialize(BYTE drv)
 {
@@ -21,17 +107,7 @@ DRESULT disk_read(BYTE drv, BYTE *buff, DWORD sector, BYTE count)
 {
     if (drv != 0 || count == 0) return RES_PARERR;
     
-    while (count--)
-    {
-        // The hardware page size is 256 bytes
-        if (__ReadDiskData(buff, sector * 512, 256) != 0)
-            return RES_ERROR;
-        
-        if (__ReadDiskData(buff + 256, sector * 512 + 256, 256) != 0)
-            return RES_ERROR;
-        
-        buff += 512;
-    }
+    read_flash(buff, sector * 512, count * 512);
     
     return RES_OK;
 }

@@ -239,7 +239,8 @@ TCHAR* f_gets (TCHAR*, int, FIL*);					/* Get a string from the file */
 #define EOF (-1)
 #endif
 
-
+/* Flush buffers to refresh any changes made to the filesystem by host computer through USB. */
+void f_flush(FATFS *fs);
 
 
 /*--------------------------------------------------------------*/

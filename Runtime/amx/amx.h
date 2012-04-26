@@ -193,7 +193,12 @@ extern  "C" {
   #error Unsupported cell size (PAWN_CELL_SIZE)
 #endif
 
-#define UNPACKEDMAX   (((cell)1 << (sizeof(cell)-1)*8) - 1)
+// Packed string support is a bit flakey (strlen({0,1,2,3}) != 0)
+// and is therefore disabled.
+#define UNPACKEDMAX 0
+// #define UNPACKEDMAX   (((cell)1 << (sizeof(cell)-1)*8) - 1)
+
+  
 #define UNLIMITED     (~1u >> 1)
 
 struct tagAMX;
@@ -521,6 +526,8 @@ int AMXAPI amx_UTF8Put(char *string, char **endptr, int maxchars, cell value);
     #pragma pack(pop) /* reset previous packing */
   #endif
 #endif
+
+int VerifyPcode(AMX *amx);
 
 #ifdef  __cplusplus
 }

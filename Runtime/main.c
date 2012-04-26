@@ -27,20 +27,24 @@
 FATFS fatfs;
 AMX amx;
 FIL amx_file;
+char amx_filename[20];
 
 // Data block allocated for the virtual machine
-uint8_t vm_data[32768];
+uint8_t vm_data[32768] __attribute__((aligned(4)));
 
 int amxinit_display(AMX *amx);
 int amx_CoreInit(AMX *amx);
 int amxinit_string(AMX *amx);
 int amxinit_fixed(AMX *amx);
 int amxinit_wavein(AMX *amx);
+int amxcleanup_wavein(AMX *amx);
 int amxinit_waveout(AMX *amx);
 int amxinit_file(AMX *amx);
+int amxcleanup_file(AMX *amx);
 int amxinit_buttons(AMX *amx);
 int amxinit_fourier(AMX *amx);
 int amxinit_time(AMX *amx);
+int amx_timer_doevents(AMX *amx);
 
 register void *stack_pointer asm("sp");
 
@@ -49,14 +53,26 @@ static int debughook(AMX *amx)
     return AMX_ERR_EXIT;
 }
 
+volatile bool ABORT = false;
+
 void TimerTick()
 {
     uint32_t ms;
-    if (held_keys(BUTTON4, &ms) && ms > 5000)
+    if (held_keys(BUTTON4, &ms))
     {
-        amx.debug = debughook;
+        if (ms > 3000)
+        {
+            amx.debug = debughook;
+        }
+    
+        if (ms > 3500)
+        {
+            ABORT = true;
+        }
     }
 }
+
+#define AMX_ERR_FILE_CHANGED 100
 
 int overlay_callback(AMX *amx, int index)
 {
@@ -72,11 +88,20 @@ int overlay_callback(AMX *amx, int index)
         if ((amx->code = amx_poolalloc(tbl[index].size, index)) == NULL)
             return AMX_ERR_OVERLAY;   /* failure allocating memory for the overlay */
         
+        // Verify that the file has not changed
+        f_flush(&fatfs);
+        FILINFO file2;
+        f_stat(amx_filename, &file2);
+        if (file2.fsize != file->fsize)
+            return AMX_ERR_FILE_CHANGED;
+        
         f_lseek(file, hdr->cod + tbl[index].offset);
         unsigned count;
         f_read(file, amx->code, tbl[index].size, &count);
         if (count != tbl[index].size)
             return AMX_ERR_FORMAT;
+        
+        return VerifyPcode(amx);
     }
     return AMX_ERR_NONE;
 }
@@ -180,10 +205,23 @@ int loadprogram(const char *filename, char *error, size_t error_size)
 
 int doevents(AMX *amx)
 {
-    return amx_menu_doevents(amx);
+    int status = amx_menu_doevents(amx);
+    if (status != 0)
+        return status;
+    
+    status = amx_timer_doevents(amx);
+    return status;
 }
 
 #define REMAINING ((p < end) ? (end - p) : 0)
+
+const char *my_aux_StrError(int status)
+{
+    if (status == AMX_ERR_FILE_CHANGED)
+        return "AMX file changed while running";
+    else
+        return aux_StrError(status);
+}
 
 void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
 {
@@ -193,7 +231,7 @@ void show_pawn_traceback(const char *filename, AMX *amx, int return_status)
     char *end = buffer + 500;
     
     p += snprintf(p, REMAINING, "Virtual machine error: %s\n",
-                  aux_StrError(return_status));
+                  my_aux_StrError(return_status));
     
     p += snprintf(p, REMAINING, "CIP: %08lx PRI: %08lx ALT: %08lx\n",
                   amx->cip, amx->pri, amx->alt);
@@ -320,23 +358,23 @@ int main(void)
     
     while (true)
     {
-        char filename[13];
-        select_file(filename);
+        select_file(amx_filename);
         
         get_keys(ANY_KEY);
         __Clear_Screen(0);
         
+        f_flush(&fatfs);
         char error[50] = {0};
-        int status = loadprogram(filename, error, sizeof(error));
+        int status = loadprogram(amx_filename, error, sizeof(error));
         if (status != 0)
         {
             char buffer[200];
             snprintf(buffer, sizeof(buffer),
                      "Loading of program %s failed:\n\n"
                      "Error %d: %s\n\n"
-                     "%s\n", filename, status, aux_StrError(status), error);
+                     "%s\n", amx_filename, status, aux_StrError(status), error);
             printf(buffer);
-            printf(filename);
+            printf(amx_filename);
             show_msgbox("Program load failed", buffer);
         }
         else
@@ -372,9 +410,12 @@ int main(void)
                 } while (status == 0 && ret != 0);
             }
             
+            amxcleanup_wavein(&amx);
+            amxcleanup_file(&amx);
+            
             if (status != 0)
             {
-                show_pawn_traceback(filename, &amx, status);
+                show_pawn_traceback(amx_filename, &amx, status);
             }
             else
             {

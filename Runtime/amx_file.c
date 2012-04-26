@@ -6,14 +6,20 @@
 #include <stdbool.h>
 
 #define FILE_COUNT 4
-static FIL files[FILE_COUNT];
+typedef struct {
+    FIL f;
+    bool valid;
+    FRESULT error;
+} file_t;
+
+static file_t files[FILE_COUNT];
 
 static cell AMX_NATIVE_CALL amx_f_open(AMX *amx, const cell *params)
 {
-    FIL *file = 0;
+    file_t *file = 0;
     for (int i = 0; i < FILE_COUNT; i++)
     {
-        if (files[i].fs == 0)
+        if (!files[i].valid)
         {
             file = &files[i];
             break;
@@ -23,44 +29,45 @@ static cell AMX_NATIVE_CALL amx_f_open(AMX *amx, const cell *params)
     if (!file)
         return 0; // Out of file descriptors
     
+    file->error = 0;
+    
     char *fname;
     amx_StrParam(amx, params[1], fname);
-    FRESULT status = f_open(file, fname, params[2]);
+    file->error = f_open(&file->f, fname, params[2]);
+    file->valid = (file->error == FR_OK);
     
-    if (status != FR_OK)
-    {
-        printf("f_open failed with %d\n", status);
-        file->fs = 0;
-        return 0;
-    }
-    else
-    {
-        return (cell)file;
-    }
+    return (cell)file;
 }
+
+#define GETPARAM() \
+    file_t *file = (file_t*)params[1]; \
+    if (!file) return 0;
+
+#define SETERROR(cmd) do {\
+    FRESULT status = (cmd); \
+    if (status != 0 && file->error == 0) file->error = status; \
+    } while(0)
 
 static cell AMX_NATIVE_CALL amx_f_close(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return false;
+    GETPARAM();
     
-    FRESULT status = f_close(file);
-    file->fs = 0; // Make sure that the file entry is marked as free
+    SETERROR(f_close(&file->f));
+    file->valid = false;
     
-    return (status == FR_OK);
+    return (file->error == FR_OK);
 }
 
 static cell AMX_NATIVE_CALL amx_f_read(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return 0;
+    GETPARAM();
     
     unsigned bytes;
-    FRESULT status = f_read(file, (char*)params[2], params[3], &bytes);
+    SETERROR(f_read(&file->f, (char*)params[2], params[3], &bytes));
     
     // Swap the bytes in each cell to convert into Pawn packed string
     cell* p = (cell*)params[2];
-    for (int i = 0; i < params[3]; i++, p++)
+    for (int i = 0; i < params[3] / 4; i++, p++)
     {
         *p = __builtin_bswap32(*p);
     }
@@ -70,8 +77,7 @@ static cell AMX_NATIVE_CALL amx_f_read(AMX *amx, const cell *params)
 
 static cell AMX_NATIVE_CALL amx_f_write(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return false;
+    GETPARAM();
     
     cell* src = (cell*)params[2];
     int count = params[3];
@@ -82,7 +88,11 @@ static cell AMX_NATIVE_CALL amx_f_write(AMX *amx, const cell *params)
         amx_StrParam(amx, src, text);
         unsigned bytes;
         unsigned size = strlen(text);
-        return (f_write(file, text, size, &bytes) == FR_OK && bytes != size);
+        if (size == 0) return true;
+        
+        SETERROR(f_write(&file->f, text, size, &bytes));
+        
+        return (bytes == size);
     }
     else
     {
@@ -93,7 +103,9 @@ static cell AMX_NATIVE_CALL amx_f_write(AMX *amx, const cell *params)
             unsigned size = 4;
             if (count < size) size = count;
             
-            if (f_write(file, &tmp, size, &bytes) != FR_OK || bytes != size)
+            SETERROR(f_write(&file->f, &tmp, size, &bytes));
+            
+            if (bytes != size)
                 return false;
             
             count -= 4;
@@ -104,34 +116,27 @@ static cell AMX_NATIVE_CALL amx_f_write(AMX *amx, const cell *params)
 
 static cell AMX_NATIVE_CALL amx_f_lseek(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return false;
-
-    return f_lseek(file, params[2]) == FR_OK;
+    GETPARAM();
+    SETERROR(f_lseek(&file->f, params[2]));
+    return 0;
 }
 
 static cell AMX_NATIVE_CALL amx_f_tell(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return 0;
-
-    return f_tell(file);
+    GETPARAM();
+    return f_tell(&file->f);
 }
 
 static cell AMX_NATIVE_CALL amx_f_size(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return 0;
-
-    return f_size(file);
+    GETPARAM();
+    return f_size(&file->f);
 }
 
 static cell AMX_NATIVE_CALL amx_f_truncate(AMX *amx, const cell *params)
 {
-    FIL* file = (FIL*)params[1];
-    if (!file) return false;
-
-    return f_truncate(file) == FR_OK;
+    GETPARAM();
+    return f_truncate(&file->f) == FR_OK;
 }
 
 static cell AMX_NATIVE_CALL amx_f_unlink(AMX *amx, const cell *params)
@@ -168,6 +173,12 @@ static cell AMX_NATIVE_CALL amx_f_readdir(AMX *amx, const cell *params)
     return true;
 }
 
+static cell AMX_NATIVE_CALL amx_f_error(AMX *amx, const cell *params)
+{
+    GETPARAM();
+    return file->error;
+}
+
 int amxinit_file(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
@@ -182,14 +193,28 @@ int amxinit_file(AMX *amx)
         {"f_getfree", amx_f_getfree},
         {"f_opendir", amx_f_opendir},
         {"f_readdir", amx_f_readdir},
+        {"f_error", amx_f_error},
         {0, 0}
     };
     
     // Clear the file table
     for (int i = 0; i < FILE_COUNT; i++)
     {
-        files[i].fs = 0;
+        files[i].valid = false;
     }
     
     return amx_Register(amx, funcs, -1);
+}
+
+int amxcleanup_file(AMX *amx)
+{
+    for (int i = 0; i < FILE_COUNT; i++)
+    {
+        if (files[i].valid)
+        {
+            f_close(&files[i].f);
+            files[i].valid = false;
+        }
+    }
+    return 0;
 }

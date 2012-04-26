@@ -750,7 +750,10 @@ FRESULT move_window (
 	return FR_OK;
 }
 
-
+void f_flush(FATFS *fs)
+{
+    move_window(fs, (fs->winsect == 0) ? 1 : 0);
+}
 
 
 /*-----------------------------------------------------------------------*/

@@ -626,7 +626,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
 
 #if defined AMX_INIT
 
-static int VerifyPcode(AMX *amx)
+int VerifyPcode(AMX *amx)
 {
   AMX_HEADER *hdr;
   cell op,cip,tgt,opmask;
@@ -1284,8 +1284,8 @@ int AMXAPI amx_Init(AMX *amx,void *program)
      */
     for (i=0; err==AMX_ERR_NONE && i<(int)((hdr->nametable - hdr->overlays)/sizeof(AMX_OVERLAYINFO)); i++) {
       err=amx->overlay(amx, i);
-      if (err==AMX_ERR_NONE)
-        err=VerifyPcode(amx);
+//      if (err==AMX_ERR_NONE)
+//        err=VerifyPcode(amx);
     } /* for */
   } /* if */
   if (err!=AMX_ERR_NONE)
@@ -3459,6 +3459,8 @@ int AMXAPI amx_Release(AMX *amx,cell *address)
   #error Unsupported cell size
 #endif
 
+#define IDX(x) (((x) & 0xFFFFFFC) | (3 - ((x) & 3)))
+
 int AMXAPI amx_StrLen(const cell *cstr, int *length)
 {
   int len;
@@ -3467,29 +3469,20 @@ int AMXAPI amx_StrLen(const cell *cstr, int *length)
   #endif
 
   assert(length!=NULL);
-  if (cstr==NULL) {
+  if (cstr==NULL ||
+      (uint32_t)cstr < 0x20000000 ||
+      (uint32_t)cstr > 0x20010000) {
     *length=0;
     return AMX_ERR_PARAMS;
   } /* if */
 
-  if ((ucell)*cstr>UNPACKEDMAX) {
-    /* packed string */
-    assert_static(sizeof(char)==1);
-    len=strlen((char *)cstr);           /* find '\0' */
-    assert(check_endian());
-    #if BYTE_ORDER==LITTLE_ENDIAN
-      /* on Little Endian machines, toggle the last bytes */
-      c=cstr[len/sizeof(cell)];         /* get last cell */
-      len=len - len % sizeof(cell);     /* len = multiple of "cell" bytes */
-      while ((c & CHARMASK)!=0) {
-        len++;
-        c <<= 8*sizeof(char);
-      } /* if */
-    #endif
-  } else {
-    for (len=0; cstr[len]!=0; len++)
-      /* nothing */;
-  } /* if */
+  char *p = (char*)cstr;
+  for (len = 0; len < 10000; len++)
+  {
+    if (p[IDX(len)] == 0)
+        break;
+  }
+      
   *length = len;
   return AMX_ERR_NONE;
 }
@@ -3556,60 +3549,26 @@ int AMXAPI amx_SetString(cell *dest,const char *source,int pack,int use_wchar,si
 #if defined AMX_XXXSTRING
 int AMXAPI amx_GetString(char *dest,const cell *source,int use_wchar,size_t size)
 {
-  int len=0;
-  #if defined AMX_ANSIONLY
-    (void)use_wchar;    /* unused parameter (if ANSI only) */
-  #endif
-  if ((ucell)*source>UNPACKEDMAX) {
-    /* source string is packed */
-    cell c=0;           /* initialize to 0 to avoid a compiler warning */
-    int i=sizeof(cell)-1;
-    char ch;
-    while ((size_t)len<size) {
-      if (i==sizeof(cell)-1)
-        c=*source++;
-      ch=(char)(c >> i*CHARBITS);
-      if (ch=='\0')
-        break;          /* terminating zero character found */
-      #if defined AMX_ANSIONLY
-        dest[len++]=ch;
-      #else
-        if (use_wchar)
-          ((wchar_t*)dest)[len++]=ch;
-        else
-          dest[len++]=ch;
-      #endif
-      i=(i+sizeof(cell)-1) % sizeof(cell);
-    } /* while */
-  } else {
-    /* source string is unpacked */
-    #if defined AMX_ANSIONLY
-      while (*source!=0 && (size_t)len<size)
-        dest[len++]=(char)*source++;
-    #else
-      if (use_wchar) {
-        while (*source!=0 && (size_t)len<size)
-          ((wchar_t*)dest)[len++]=(wchar_t)*source++;
-      } else {
-        while (*source!=0 && (size_t)len<size)
-          dest[len++]=(char)*source++;
-      } /* if */
-    #endif
-  } /* if */
-  /* store terminator */
-  if ((size_t)len>=size)
-    len=size-1;
-  if (len>=0) {
-    #if defined AMX_ANSIONLY
-      dest[len]='\0';
-    #else
-      if (use_wchar)
-        ((wchar_t*)dest)[len]=0;
-      else
-        dest[len]='\0';
-    #endif
-  } /* IF */
-  return AMX_ERR_NONE;
+    int len;
+  
+    if (source==NULL ||
+        (uint32_t)source < 0x20000000 ||
+        (uint32_t)source > 0x20010000) {
+        *dest = 0;
+        return AMX_ERR_PARAMS;
+    }
+
+    char *p = (char*)source;
+    for (len = 0; len < size - 1; len++)
+    {
+        dest[len] = p[IDX(len)];
+        if (p[IDX(len)] == 0)
+            break;
+    }
+
+    dest[len] = 0;
+    
+    return AMX_ERR_NONE;
 }
 #endif /* AMX_XXXSTRING */
 

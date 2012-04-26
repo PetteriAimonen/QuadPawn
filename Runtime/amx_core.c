@@ -91,6 +91,20 @@ static cell AMX_NATIVE_CALL amx_memset(AMX *amx,const cell *params)
     return 0;
 }
 
+static cell AMX_NATIVE_CALL amx_memcpy(AMX *amx,const cell *params)
+{
+    cell *dest = (cell*)params[1];
+    cell *src = (cell*)params[2];
+    cell count = params[3];
+    
+    while (count--)
+    {
+        *dest++ = *src++;
+    }
+    
+    return 0;
+}
+
 int amx_CoreInit(AMX *amx)
 {
     const AMX_NATIVE_INFO core_Natives[] = {
@@ -100,6 +114,7 @@ int amx_CoreInit(AMX *amx)
         { "heapspace",     heapspace },
         { "funcidx",       funcidx },
         { "memset", amx_memset},
+        { "memcpy", amx_memcpy},
         {0, 0}
     };
     

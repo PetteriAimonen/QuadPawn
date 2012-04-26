@@ -762,10 +762,18 @@ amx_exec_run:
     itt eq
     moveq r11, #AMX_ERR_DIVIDE  @ r0 == 0 -> set error code
     beq .amx_exit               @ r0 == 0 -> jump to error-exit
-    mov r11, r0
+    mov r11, r0         @ R11 is the divisor, R0 is result, R1 is modulus
     sdiv r0, r1, r0
     mls r1, r0, r11, r1
+    beq .sdiv_done
 
+    eors r12, r1, r11
+    bpl .sdiv_done
+
+    add r1, r1, r11
+    sub r0, r0, #1
+    
+.sdiv_done:
 @    stmfd sp!, {r2 - r3, lr}    @ need two more scratch registers
 @    @ save input registers and create absolute values
 @    movs r2, r0

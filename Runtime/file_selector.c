@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include "metadata.h"
 
+extern FATFS fatfs;
+
 static const uint32_t default_icon[] = {
 0b000000000000001000000000000000,
 0b000000000000011110000000000000,
@@ -129,6 +131,10 @@ static void render_screen(int page, int *maxindex)
             i++;
         }
     }
+    
+    if (f_readdir(&dir, &file) == 0 && file.fname[0] != 0)
+        i++;
+    
     *maxindex = i;
     
     if (*maxindex == 0)
@@ -197,6 +203,7 @@ void select_file(char result[13])
         if (get_keys(BUTTON2))
         {
             // Refresh
+            f_flush(&fatfs);
             rerender = true;
         }
         
@@ -227,11 +234,11 @@ void select_file(char result[13])
             
             if (index >= maxindex)
             {
-                if (maxindex == ICONS_ON_SCREEN)
+                if (maxindex > ICONS_ON_SCREEN)
                 {
                     page++;
-                    render_screen(page, &maxindex);
                     index -= 12;
+                    rerender = true;
                 }
                 else
                 {

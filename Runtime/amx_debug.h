@@ -34,5 +34,5 @@ bool amxdbg_format_locals(AMX_DEBUG_INFO *dbg, AMX *amx,
                           char *dest, int dest_size);
 
 // Get the previous caller from the call stack and the frame pointer of it
-// Returns the instruction pointer to the CALL instruction
+// Returns the instruction pointer to the CALL instruction, or 0 if there are no more callers.
 unsigned amxdbg_get_caller(AMX *amx, unsigned *frame);

@@ -10,22 +10,49 @@
 #include "mathutils.h"
 #include "utils.h"
 
+extern volatile bool ABORT;
+
+static cell ch_a_couple, ch_a_range, ch_a_offset;
+static cell ch_b_couple, ch_b_range, ch_b_offset;
+
 static cell AMX_NATIVE_CALL amx_config_chA(AMX *amx, const cell *params)
 {
     // config_chA(ADCCoupling: coupling, ADCRange: range, offset = 0);
-    __Set(CH_A_COUPLE, params[1]);
-    __Set(CH_A_RANGE, params[2]);
-    __Set(CH_A_OFFSET, params[3]);
+    ch_a_couple = params[1];
+    ch_a_range = params[2];
+    ch_a_offset = params[3];
+    __Set(CH_A_COUPLE, ch_a_couple);
+    __Set(CH_A_RANGE, ch_a_range);
+    __Set(CH_A_OFFSET, ch_a_offset);
     
     return 0;
 }
 
 static cell AMX_NATIVE_CALL amx_config_chB(AMX *amx, const cell *params)
 {
-    __Set(CH_B_COUPLE, params[1]);
-    __Set(CH_B_RANGE, params[2]);
-    __Set(CH_B_OFFSET, params[3]);
+    ch_b_couple = params[1];
+    ch_b_range = params[2];
+    ch_b_offset = params[3];
+    __Set(CH_B_COUPLE, ch_b_couple);
+    __Set(CH_B_RANGE, ch_b_range);
+    __Set(CH_B_OFFSET, ch_b_offset);
     
+    return 0;
+}
+
+static cell AMX_NATIVE_CALL amx_getconfig_chA(AMX *amx, const cell *params)
+{
+    *(cell*)params[1] = ch_a_couple;
+    *(cell*)params[2] = ch_a_range;
+    *(cell*)params[3] = ch_a_offset;
+    return 0;
+}
+
+static cell AMX_NATIVE_CALL amx_getconfig_chB(AMX *amx, const cell *params)
+{
+    *(cell*)params[1] = ch_b_couple;
+    *(cell*)params[2] = ch_b_range;
+    *(cell*)params[3] = ch_b_offset;
     return 0;
 }
 
@@ -35,6 +62,8 @@ static cell AMX_NATIVE_CALL amx_wavein_samplerate(AMX *amx, const cell *params)
     int freq = params[1];
     int prescale = (CPUFREQ / 65536) / freq; // Prescale is used only for <1000Hz
     int arr = div_round_up(CPUFREQ / (prescale + 1), freq) - 1;
+    
+    if (arr < 0) arr = 0;
     
     __Set(T_BASE_PSC, prescale);
     __Set(T_BASE_ARR, arr);
@@ -88,13 +117,19 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
             // Synchronizing to DAC is easy, as the frequency is at most 1MHz
             // or so.
             GPIOB->BSRR = 2;
+            while (DMA2_Channel4->CNDTR > 10)
+            {
+                if (ABORT) return 0;
+            }
+            
             while (DMA2_Channel4->CNDTR != 1);
+            
+            int threshold = (TIM7->ARR + 1) / 2;
             
             __disable_irq();
             while (DMA2_Channel4->CNDTR != 1);
             while (DMA2_Channel4->CNDTR == 1);
-            uint32_t count = DMA2_Channel4->CNDTR;
-            while (DMA2_Channel4->CNDTR == count);
+            while (TIM7->CNT < threshold);
             GPIOB->BRR = 2;
             __enable_irq();
         }
@@ -114,9 +149,11 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
             DMA1_Channel4->CCR = 0x3A11;
             DMA1->IFCR = DMA_IFCR_CTCIF4;
             
+            TIM4->CR2 = 0; //(TIM4->CR1 + 1) / 2;
+            
             TIM4->DIER = TIM_DIER_CC2DE;
             
-            while (!(DMA1->ISR & DMA_ISR_TCIF4));
+            while (!(DMA1->ISR & DMA_ISR_TCIF4) && !ABORT);
             DMA1_Channel4->CCR = 0;
             TIM4->DIER = 0;
         }
@@ -124,22 +161,14 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
     
     if (trigger_is_unconditional || sync)
     {
-        while (!__Get(FIFO_START));
-        // Get rid of the presamples
-        for (int i = 0; i < 151; i++)
-        {
-            while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
-            __Read_FIFO();
-        }
+        while (!__Get(FIFO_START) && !ABORT);
         
-        if (sync)
+        int skip = 151; // Get rid of the presamples
+        
+        for (int i = 0; i < skip; i++)
         {
-            // Get rid of ADC delay
-            for (int i = 0; i < 5; i++)
-            {
-                while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
-                __Read_FIFO();
-            }
+            while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL) && !ABORT);
+            __Read_FIFO();
         }
     }
     
@@ -202,7 +231,7 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
     uint32_t **arrays = (uint32_t**)&params[1]; // Array of 4
     int *counts = (int*)&params[5]; // Array of 4
     
-    while (!__Get(FIFO_START));
+    while (!__Get(FIFO_START) && !ABORT);
     
     // If the FIFO is already full, we don't need to do any waiting
     bool full = __Get(FIFO_FULL);
@@ -225,13 +254,13 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
             // some samples even before the buffer is completely full.
             for (int i = 0; i < 4; i++)
             {
-                while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL));
+                while (__Get(FIFO_EMPTY) && !__Get(FIFO_FULL) && !ABORT);
                 samples[i] = __Read_FIFO();
             }
             
             full = __Get(FIFO_FULL);
         }
-    } while(mangle_samples(arrays, counts, samples));
+    } while(mangle_samples(arrays, counts, samples) && !ABORT);
     
     // I don't even want to think about the reasons why this is needed.
     // It guards against FIFO accidentally receiving LCD reads, but
@@ -241,126 +270,18 @@ static cell AMX_NATIVE_CALL amx_wavein_read(AMX *amx, const cell *params)
     return 0;
 }
 
-/* Real time capture stuff */
-
-// GPIOC->BSRR values to toggle GPIOC5
-static const uint32_t hl_set[2] = {1 << (16 + 5), 1 << 5};
-static int fifo_halfsize;
-static uint32_t *fifo;
-static int fifo_read_pos;
-
-static cell AMX_NATIVE_CALL amx_wavein_realtime_start(AMX *amx, const cell *params)
-{
-    // wavein_realtime_start(fifo[], samplerate, count = sizeof fifo);
-    fifo_halfsize = (params[3] / 2) & 0xFFFFC; // Have to be divisible by 4
-    
-    // We want the ADC to sample as fast as possible, because there is some
-    // 6 cycle lag between the ADC & digital channels in realtime mode.
-    __Set(TRIGG_MODE, UNCONDITION);
-    __Set(T_BASE_ARR, 1);
-    
-    // Calculate the parameters for TIM1. We want 2 cycles per each sample, to
-    // read the two parts of the signal.
-    int freq = params[2] * 2;
-    int prescale = (CPUFREQ / 65536) / freq; // Prescale is used only for <1000Hz
-    int arr = div_round_up(CPUFREQ / (prescale + 1), freq) - 1;
-    
-    TIM1->CR1 = 0; // Turn the timer off until we are ready
-    TIM1->CR2 = 0;
-    TIM1->CNT = 0;
-    TIM1->SR = 0;
-    TIM1->PSC = prescale;
-    TIM1->ARR = arr;
-    TIM1->CCMR1 = 0;
-    TIM1->CCMR2 = 0;
-    TIM1->DIER = TIM_DIER_CC2DE | TIM_DIER_CC4DE;
-    TIM1->CCR1 = 0;
-    TIM1->CCR2 = 0;
-    TIM1->CCR4 = 2;
-    
-    // DMA Channel 3: Copy data from hl_set to GPIOC->BSRR
-    DMA1_Channel3->CCR = 0;
-    DMA1_Channel3->CNDTR = 2;
-    DMA1_Channel3->CPAR = (uint32_t)&GPIOC->BSRR;
-    DMA1_Channel3->CMAR = (uint32_t)hl_set;
-    DMA1_Channel3->CCR = 0x3AB1;
-    GPIOC->BSRR = hl_set[1];
-    
-    // DMA Channel 4: Copy data from FPGA to fifo
-    DMA1_Channel4->CCR = 0;
-    DMA1_Channel4->CNDTR = fifo_halfsize * 4; // two transfers per cell
-    DMA1_Channel4->CPAR = 0x64000000; // FPGA memory-mapped address
-    DMA1_Channel4->CMAR = params[1];
-    DMA1_Channel4->CCR = 0x35A1;
-    DMA1->IFCR = DMA_IFCR_CTCIF4;
-    
-    fifo = (uint32_t*)params[1];
-    fifo_read_pos = 0;
-    
-    // Now, lets go!
-    TIM1->CR1 |= TIM_CR1_CEN;
-    
-    return div_round(CPUFREQ / (prescale + 1), arr + 1);
-}
-
-static cell AMX_NATIVE_CALL amx_wavein_realtime_stop(AMX *amx, const cell *params)
-{
-    TIM1->DIER = 0;
-    DMA1_Channel3->CCR = 0;
-    DMA1_Channel4->CCR = 0;
-    fifo_read_pos = -1;
-    
-    return 0;
-}
-    
-static cell AMX_NATIVE_CALL amx_wavein_realtime_read(AMX *amx, const cell *params)
-{
-    if (fifo_read_pos < 0) return false;
-    
-    // wavein_realtime_read(chA{}, chB{}, chC{}, chD{}, countA, countB, countC, countD);
-    uint32_t **arrays = (uint32_t**)&params[1]; // Array of 4
-    int *counts = (int*)&params[5]; // Array of 4
-    
-    int write_pos = fifo_halfsize * 2 - DMA1_Channel4->CNDTR / 2;
-    
-    if (write_pos > fifo_read_pos && (DMA1->ISR & DMA_ISR_TCIF4))
-    {
-        // Overflow
-        amx_wavein_realtime_stop(amx, params);
-        return false;
-    }
-    
-    uint32_t* samples;
-    do
-    {
-        while (fifo_read_pos <= write_pos && fifo_read_pos + 4 >= write_pos) {
-            // Wait for new samples
-            write_pos = fifo_halfsize * 2 - DMA1_Channel4->CNDTR / 2;
-        }
-        
-        samples = fifo + fifo_read_pos;
-        
-        fifo_read_pos = (fifo_read_pos + 4) % (2 * fifo_halfsize);
-        if (fifo_read_pos == 0)
-            DMA1->IFCR = DMA_IFCR_CTCIF4;
-    } while (mangle_samples(arrays, counts, samples));
-    
-    return true;
-}
-
 int amxinit_wavein(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
         {"config_chA", amx_config_chA},
         {"config_chB", amx_config_chB},
+        {"getconfig_chA", amx_getconfig_chA},
+        {"getconfig_chB", amx_getconfig_chB},
         {"wavein_samplerate", amx_wavein_samplerate},
         {"wavein_settrigger", amx_wavein_settrigger},
         {"wavein_start", amx_wavein_start},
         {"wavein_istriggered", amx_wavein_istriggered},
         {"wavein_read", amx_wavein_read},
-        {"wavein_realtime_start", amx_wavein_realtime_start},
-        {"wavein_realtime_read", amx_wavein_realtime_read},
-        {"wavein_realtime_stop", amx_wavein_realtime_stop},
         {0, 0}
     };
     
@@ -369,7 +290,5 @@ int amxinit_wavein(AMX *amx)
 
 int amxcleanup_wavein(AMX *amx)
 {
-    amx_wavein_realtime_stop(NULL, NULL);
-    
     return 0;
 }

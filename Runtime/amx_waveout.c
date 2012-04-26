@@ -24,6 +24,8 @@ static cell AMX_NATIVE_CALL amx_waveout_analog(AMX *amx, const cell *params)
     DMA2_Channel4->CCR |= DMA_CCR1_EN;
     
     __Set(ANALOG_ARR, arr);
+    
+    // Turn off the DAC output buffer - it limits the voltage range.
     DAC->CR |= DAC_CR_BOFF1;
     
     return div_round(CPUFREQ / (prescale + 1), arr + 1);

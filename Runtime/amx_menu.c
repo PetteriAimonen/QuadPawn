@@ -9,7 +9,7 @@
 #include "amx_menu.h"
 #include "ds203_io.h"
 
-int b1_func, b2_func, b3_func, b4_func, s1_func, s2_func;
+static int b1_func, b2_func, b3_func, b4_func, s1_func, s2_func;
 
 static cell AMX_NATIVE_CALL amx_draw_menubar(AMX *amx, const cell *params)
 {
