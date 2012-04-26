@@ -161,7 +161,7 @@ stock get_ticklabel(Fixed: value, bool: log)
             suffix{0} = 'm';
         }
         
-        if (value < FIX(10.0) && ftrunc(value) * 10 != ftrunc(value * 10))
+        if (absf(value) < FIX(10.0) && ftrunc(value) * 10 != ftrunc(value * 10))
         {
             // Value is 1.x
             result = strf(value, 1);

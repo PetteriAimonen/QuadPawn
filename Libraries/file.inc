@@ -66,9 +66,8 @@ stock bool: f_readline(File: file, dest{}, destsize = sizeof dest)
         
         dest{i} = b{0};
     }
-    
     dest{i} = 0;
-    return false;
+    return i != 0;
 }
 
 /// Seek into a different point in file, pos being count of bytes from
@@ -128,3 +127,13 @@ const fileerror:
 /// If multiple errors have occurred since file opening, returns the
 /// first one that occurred.
 native fileerror: f_error(File: file);
+
+/// Check whether a file exists
+native bool: f_exists(const filename{});
+
+/// Select an unused filename using a format string.
+/// E.g. select_filename("FILE%03d.CSV") might give "FILE001.CSV".
+native select_filename(buffer{}, buf_size = sizeof buffer);
+
+
+

@@ -42,6 +42,15 @@ native draw_text(const str{}, x, y, Color: fg=white,
 /// Draw text with automatic word wrapping.
 native draw_flowtext(const str{}, x, y, w, h, Color: fg = white, Color: bg = transparent, bool: center = false);
 
+/// Clear the bottom row of screen and draw text there.
+stock draw_status(const str{})
+{
+    new buffer{55} = "";
+    strcat(buffer, str);
+    strcat(buffer, "                                                      ");
+    draw_text(buffer, 0, 0, .bg = black);
+}
+
 /// Get the LCD type information, for debugging purposes
 native lcd_type();
                     
@@ -250,3 +259,7 @@ stock render_polyline(const Fixed: xpoints[], const Fixed: ypoints[],
         olddelta = newdelta;
     }
 }
+
+/// Save a bitmap to a file.
+/// You can give custom colors in palette, which will be added to the default palette. If more than 2 colors are given, they overwrite some of the default colors.
+native bool: save_bitmap(const filename{}, Color: palette[] = [black], palette_size = sizeof palette);

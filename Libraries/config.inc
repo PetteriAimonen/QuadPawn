@@ -31,11 +31,14 @@ const ConfigState: {
     /// it is selected, also responds to keypresses.
     config_edit = 2,
     
+    /// Show help for an option
+    config_help = 3,
+    
     /// Saving state, just before exiting the dialog.
-    config_save = 3,
+    config_save = 4,
     
     /// Exit the dialog
-    config_exit = 4
+    config_exit = 5
 }
 
 // Constants for the graphical layout
@@ -59,8 +62,29 @@ static current_index;
 /// Index of the currently selected control
 static selected_index = 0;
 
+static old_selected_index = -1;
+
+/// Does the selected control have help message?
+static bool: has_help;
+
 /// Y-coordinate for the current control
 static current_y;
+
+/// Handle help message for a control
+static do_help(const help{})
+{
+    if (current_index == selected_index && help{0} != 0)
+    {
+        if (config_state == config_help)
+        {
+            show_msgbox(help);
+        }
+        else
+        {
+            has_help = true;
+        }
+    }
+}
 
 /// Proceed to next control. Call this at the end of editable control drawing,
 /// but not for headers or other passive elements.
@@ -86,14 +110,24 @@ stock start_config(const filename{}, bool: load_only)
     config_file = f_open(filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
     next_state = load_only ? config_load : config_edit;
     selected_index = 0;
+    old_selected_index = -1;
     
     clear_screen(bgcolor);
-    draw_menubar("OK", "Cancel", "", "");
 }
 
 stock bool:do_config()
 {
-    new max_index;
+    static max_index;
+    
+    if (selected_index != old_selected_index && config_state == config_edit)
+    {
+        if (has_help)
+            draw_menubar("OK", "Cancel", "", "Help");
+        else
+            draw_menubar("OK", "Cancel", "", "");
+        old_selected_index = selected_index;
+    }
+    
     if (config_state == config_edit && next_state == config_edit)
     {
         // Fill the rest of the screen with black to clear any leftovers
@@ -103,7 +137,7 @@ stock bool:do_config()
         get_keys(ANY_KEY);
         while (!peek_keys(ANY_KEY)) {}
     }
-    
+        
     config_state = next_state;
     
     if (config_state == config_load)
@@ -122,6 +156,11 @@ stock bool:do_config()
             config_state = config_load;
             next_state = config_exit;
         }
+        else if (get_keys(BUTTON4))
+        {
+            config_state = config_help;
+            next_state = config_edit;
+        }
         else if (get_keys(SCROLL2_LEFT))
         {
                 selected_index--;
@@ -135,7 +174,7 @@ stock bool:do_config()
     }
     else if (config_state == config_exit)
     {
-//         clear_screen();
+        clear_screen();
         if (!f_close(config_file))
         {
             new buf{50} = "Failed to save the configuration file: ";
@@ -150,7 +189,7 @@ stock bool:do_config()
     {
         f_lseek(config_file, 0);
     }
-    else if (config_state == config_edit)
+    else if (config_state == config_edit || config_state == config_help)
     {
         current_index = 0;
         current_y = 200;
@@ -161,12 +200,16 @@ stock bool:do_config()
         f_truncate(config_file);
     }
     
+    has_help = false;
+    
     return true;
 }
 
 /// An integer configuration setting
 stock config_integer(const id{}, const text{}, 
-                     &variable, defval, minval = cellmin, maxval = cellmax)
+                     &variable, defval, minval = cellmin, maxval = cellmax,
+                     const help{} = ""
+                    )
 {
     switch (config_state)
     {
@@ -176,8 +219,10 @@ stock config_integer(const id{}, const text{},
                 variable = defval;
         }
         
-        case config_edit:
+        case config_edit, config_help:
         {
+            do_help(help);
+            
             if (selected() && get_keys(SCROLL1_LEFT))
                 variable -= scroller_speed();
             
@@ -202,7 +247,9 @@ stock config_integer(const id{}, const text{},
 /// An fixed-point configuration setting
 stock config_fixed(const id{}, const text{}, 
                     &Fixed:variable, Fixed: defval, Fixed: increment = FIX(0.01),
-                    Fixed: minval = fix16_min, Fixed: maxval = fix16_max)
+                    Fixed: minval = fix16_min, Fixed: maxval = fix16_max,
+                    const help{} = ""
+                  )
 {
     switch (config_state)
     {
@@ -212,8 +259,10 @@ stock config_fixed(const id{}, const text{},
                 variable = defval;
         }
         
-        case config_edit:
+        case config_edit, config_help:
         {
+            do_help(help);
+            
             if (selected() && get_keys(SCROLL1_LEFT))
                 variable -= scroller_speed() * increment;
             
@@ -239,7 +288,9 @@ stock config_fixed(const id{}, const text{},
 /// Configuration setting with multiple textual choices
 stock config_multichoice(const id{}, const text{}, 
                      &variable, const labels[]{}, defval = 0,
-                     count = sizeof labels)
+                     count = sizeof labels,
+                     const help{} = ""
+                        )
 {
     switch (config_state)
     {
@@ -249,8 +300,10 @@ stock config_multichoice(const id{}, const text{},
                 variable = defval;
         }
         
-        case config_edit:
+        case config_edit, config_help:
         {
+            do_help(help);
+            
             if (selected() && get_keys(SCROLL1_LEFT))
                 variable--;
             
@@ -277,10 +330,12 @@ stock config_multichoice(const id{}, const text{},
 
 /// Boolean configuration setting
 stock config_boolean(const id{}, const text{},
-                     &bool: variable, bool: defval = false)
+                     &bool: variable, bool: defval = false,
+                     const help{} = ""
+                    )
 {
     new choices[]{} = ["No", "Yes"];
     new value = variable ? 1 : 0;
-    config_multichoice(id, text, value, choices, defval ? 1 : 0);
+    config_multichoice(id, text, value, choices, defval ? 1 : 0, .help = help);
     variable = (value == 1);
 }

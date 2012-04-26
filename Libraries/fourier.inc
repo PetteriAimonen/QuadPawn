@@ -4,6 +4,7 @@
  */
 
 #include <fixed>
+#include <complex>
  
 /// Discrete Fourier transform at a single frequency.
 /// The frequency is given as the number of samples in a single period.
@@ -16,15 +17,3 @@ native dft(const input{}, &Fixed: real, &Fixed: imag, Fixed: period, count);
 /// All arrays are of same size.
 /// If window is true, the Hamming window function is applied to input values before processing.
 native fft(const input{}, Fixed: real[], Fixed: imag[], count, bool:window = true);
-
-/// Get the absolute value from a complex number
-stock Fixed: cabs(Fixed: real, Fixed: imag)
-{
-    return sqrt(real * real + imag * imag);
-}
-
-/// Get the argument (phase) from a complex number, in radians
-stock Fixed: carg(Fixed: real, Fixed: imag)
-{
-    return atan2(real, imag);
-}

@@ -7,6 +7,7 @@
 stock show_dialog(const message{}, opt1{}, opt2{} = "", opt3{} = "", opt4{} = "")
 {
     clear_screen();
+    get_keys(ANY_KEY);
     draw_menubar(opt1, opt2, opt3, opt4);
     draw_flowtext(message, 10, 10, 380, 160);
 

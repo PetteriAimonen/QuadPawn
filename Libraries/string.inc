@@ -196,7 +196,7 @@ stock strf(Fixed: value, decimals = 4)
     
     if (fracval >= scale)
     {
-        intval++;
+        intval += (value > 0) ? 1 : -1;
         fracval = 0;
     }
     
@@ -299,3 +299,23 @@ stock strcmp(const string1{}, const string2{}, bool:ignorecase=false, length=cel
 stock bool: strequal(const string1{}, const string2{}, bool:ignorecase=false, length=cellmax)
     return strcmp(string1, string2, ignorecase, length) == 0;
 
+
+/// This is a helper function for constructing strings without manually allocating storage.
+/// It is limited to 100 characters.
+stock strjoin(const s1{}, const s2{} = "", const s3{} = "",
+              const s4{} = "", const s5{} = "", const s6{} = "",
+              const s7{} = "", const s8{} = "", const s9{} = ""
+             )
+{
+    new buffer{100} = "";
+    strcat(buffer, s1);
+    strcat(buffer, s2);
+    strcat(buffer, s3);
+    strcat(buffer, s4);
+    strcat(buffer, s5);
+    strcat(buffer, s6);
+    strcat(buffer, s7);
+    strcat(buffer, s8);
+    strcat(buffer, s9);
+    return buffer;
+}
