@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "BIOS.h"
 #include "ds203_io.h"
 #include "amx.h"
@@ -169,6 +170,19 @@ static cell AMX_NATIVE_CALL amx_draw_bitmap(AMX *amx, const cell *params)
     return 0;
 }
 
+static cell AMX_NATIVE_CALL amx_save_bitmap(AMX *amx, const cell *params)
+{
+    char *fname;
+    amx_StrParam(amx, params[1], fname);
+    
+    uint32_t palette[16];
+    memcpy(palette, bmp_default_palette, sizeof(palette));
+    for (int i = 0; i < params[3]; i++)
+        palette[15 - i] = ((cell*)params[2])[i];
+    
+    return write_bitmap(fname, palette);
+}
+
 int amxinit_display(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
@@ -185,6 +199,7 @@ int amxinit_display(AMX *amx)
         {"drawline", amx_drawline},
         {"draw_rectangle", amx_draw_rectangle},
         {"draw_bitmap", amx_draw_bitmap},
+        {"save_bitmap", amx_save_bitmap},
         {0, 0}
     };
     

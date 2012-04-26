@@ -4,6 +4,7 @@
 #include "amx.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include "ds203_io.h"
 
 #define FILE_COUNT 4
 typedef struct {
@@ -67,7 +68,7 @@ static cell AMX_NATIVE_CALL amx_f_read(AMX *amx, const cell *params)
     
     // Swap the bytes in each cell to convert into Pawn packed string
     cell* p = (cell*)params[2];
-    for (int i = 0; i < params[3] / 4; i++, p++)
+    for (int i = 0; i <= params[3] / 4; i++, p++)
     {
         *p = __builtin_bswap32(*p);
     }
@@ -179,6 +180,21 @@ static cell AMX_NATIVE_CALL amx_f_error(AMX *amx, const cell *params)
     return file->error;
 }
 
+static cell AMX_NATIVE_CALL amx_f_exists(AMX *amx, const cell *params)
+{
+    char *fname;
+    amx_StrParam(amx, params[1], fname);
+    return f_exists(fname);
+}
+
+static cell AMX_NATIVE_CALL amx_select_filename(AMX *amx, const cell *params)
+{
+    char *format;
+    amx_StrParam(amx, params[1], format);
+    amx_SetString((cell*)params[1], select_filename(format), true, false, params[2]);
+    return 0;
+}
+
 int amxinit_file(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
@@ -194,6 +210,8 @@ int amxinit_file(AMX *amx)
         {"f_opendir", amx_f_opendir},
         {"f_readdir", amx_f_readdir},
         {"f_error", amx_f_error},
+        {"f_exists", amx_f_exists},
+        {"select_filename", amx_select_filename},
         {0, 0}
     };
     
