@@ -29,13 +29,11 @@ const FileAccess:
     FA_OPEN_ALWAYS      = 0x10
 }
 
-/// Open a file. Returns 0 if the operation fails, and a non-zero file id
-/// otherwise.
+/// Open a file.
 native File: f_open(const filename{}, FileAccess: mode = FA_READ);
 
-/// Close a file and release any RAM allocated for it.
-/// Returns true if everything succeeds.
-/// If parameter is 0, does nothing and returns false.
+/// Close a file and flush any data still in buffers.
+/// Returns false if there has been any error since opening.
 native bool: f_close(File: file);
 
 /// Read raw bytes from file. Returns number of bytes read, which is
@@ -75,7 +73,7 @@ stock bool: f_readline(File: file, dest{}, destsize = sizeof dest)
 
 /// Seek into a different point in file, pos being count of bytes from
 /// the start. Specifying a pos beyond end of file expands the file.
-native bool: f_lseek(File: file, position);
+native f_lseek(File: file, position);
 
 /// Get the current position in a file.
 native f_tell(File: file);
@@ -84,10 +82,10 @@ native f_tell(File: file);
 native f_size(File: file);
 
 /// Truncate file at current location
-native bool:f_truncate(File: file);
+native f_truncate(File: file);
 
 /// Remove a file
-native f_unlink(const filename{});
+native bool: f_unlink(const filename{});
 
 /// Get free space in bytes
 native f_getfree();
@@ -101,3 +99,32 @@ native f_opendir();
 /// Give a variable reference as filesize to retrieve also the file size.
 /// Returns false when there are no more files.
 native bool: f_readdir(filename{13}, &filesize = 0);
+
+const fileerror:
+{
+    FR_OK = 0,                                          /* (0) Succeeded */
+    FR_DISK_ERR,                                    /* (1) A hard error occured in the low level disk I/O layer */
+    FR_INT_ERR,                                     /* (2) Assertion failed */
+    FR_NOT_READY,                                   /* (3) The physical drive cannot work */
+    FR_NO_FILE,                                     /* (4) Could not find the file */
+    FR_NO_PATH,                                     /* (5) Could not find the path */
+    FR_INVALID_NAME,                    /* (6) The path name format is invalid */
+    FR_DENIED,                                      /* (7) Acces denied due to prohibited access or directory full */
+    FR_EXIST,                                       /* (8) Acces denied due to prohibited access */
+    FR_INVALID_OBJECT,                  /* (9) The file/directory object is invalid */
+    FR_WRITE_PROTECTED,                 /* (10) The physical drive is write protected */
+    FR_INVALID_DRIVE,                   /* (11) The logical drive number is invalid */
+    FR_NOT_ENABLED,                                 /* (12) The volume has no work area */
+    FR_NO_FILESYSTEM,                   /* (13) There is no valid FAT volume */
+    FR_MKFS_ABORTED,                    /* (14) The f_mkfs() aborted due to any parameter error */
+    FR_TIMEOUT,                                     /* (15) Could not get a grant to access the volume within defined period */
+    FR_LOCKED,                                      /* (16) The operation is rejected according to the file shareing policy */
+    FR_NOT_ENOUGH_CORE,                 /* (17) LFN working buffer could not be allocated */
+    FR_TOO_MANY_OPEN_FILES, /* (18) Number of open files > _FS_SHARE */
+    FR_INVALID_PARAMETER    /* (19) Given parameter is invalid */
+}
+
+/// Get the error code for a given file handle.
+/// If multiple errors have occurred since file opening, returns the
+/// first one that occurred.
+native fileerror: f_error(File: file);

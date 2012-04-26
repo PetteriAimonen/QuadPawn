@@ -81,10 +81,10 @@ static drawbg() {
     );
 }
 
-stock start_config(const filename{})
+stock start_config(const filename{}, bool: load_only)
 {
     config_file = f_open(filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
-    next_state = config_load;
+    next_state = load_only ? config_load : config_edit;
     selected_index = 0;
     
     clear_screen(bgcolor);
@@ -108,7 +108,7 @@ stock bool:do_config()
     
     if (config_state == config_load)
     {
-        next_state = config_edit;
+        next_state = config_exit;
     }
     else if (config_state == config_edit)
     {
@@ -136,7 +136,12 @@ stock bool:do_config()
     else if (config_state == config_exit)
     {
 //         clear_screen();
-        f_close(config_file);
+        if (!f_close(config_file))
+        {
+            new buf{50} = "Failed to save the configuration file: ";
+            strcat(buf, str(f_error(config_file)));
+            show_msgbox(buf);
+        }
         config_file = File:0;
         return false;
     }
@@ -252,7 +257,10 @@ stock config_multichoice(const id{}, const text{},
             if (selected() && get_keys(SCROLL1_RIGHT))
                 variable++;
             
-            variable = clamp(variable, 0, count - 1);
+            if (count > 2)
+                variable = clamp(variable, 0, count - 1);
+            else
+                variable = variable % count;
             
             drawbg();
             draw_text(text, label_column, current_y, textcolor);
@@ -265,4 +273,14 @@ stock config_multichoice(const id{}, const text{},
             inifile_writeint(config_file, id, variable);
         }
     }
+}
+
+/// Boolean configuration setting
+stock config_boolean(const id{}, const text{},
+                     &bool: variable, bool: defval = false)
+{
+    new choices[]{} = ["No", "Yes"];
+    new value = variable ? 1 : 0;
+    config_multichoice(id, text, value, choices, defval ? 1 : 0);
+    variable = (value == 1);
 }

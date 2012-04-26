@@ -17,6 +17,11 @@ const ADCRange: {
     ADC_OTHER_CHANNEL = 8 // For interlaced 2x sample speed capture
 }
 
+new adc_range_names[8]{} = [
+    "50mV", "100mV", "200mV", "500mV", "1V", "2V", "5V", "10V"
+];
+#pragma unused adc_range_names
+
 const Channel: {
     Ch_A = 0,
     Ch_B = 1,
@@ -47,6 +52,10 @@ const TriggerMode: {
 /// Configure settings related to the analog input stage
 native config_chA(ADCCoupling: coupling, ADCRange: range, offset = 128);
 native config_chB(ADCCoupling: coupling, ADCRange: range, offset = 128);
+
+/// Read back the input config (used by calibration.inc)
+native getconfig_chA(&ADCCoupling: coupling, &ADCRange: range, &offset);
+native getconfig_chB(&ADCCoupling: coupling, &ADCRange: range, &offset);
 
 /// Set the sample rate of the inputs, in Hz.
 /// This tries to achieve a sample rate as close as possible to the given rate.
@@ -79,36 +88,97 @@ native bool: wavein_istriggered();
 /// If the trigger has not yet occurred, this function will wait for it.
 /// Samples are stored in packed format (8 bits per value), so use {} to index
 /// to the arrays. The number of samples read is always a multiple of 4.
-native wavein_read(chA{}, chB{} = {0}, chC{} = {0}, chD{} = {0},
+native wavein_read(chA{} = {0}, chB{} = {0}, chC{} = {0}, chD{} = {0},
     countA = sizeof chA, countB = sizeof chB, countC = sizeof chC, countD = sizeof chD);
 
-/// Start a continuous capture (not limited to 4096 samples).
-/// You need to provide a storage area for FIFO. The larger the buffer, the
-/// more time you have between calls to wavein_realtime_read(). However, you
-/// shouldn't directly read from the FIFO without using wavein_realtime_read().
-/// Samplerates higher than 100kHz probably don't work, because you can't
-/// process the samples fast enough. Returns the actual samplerate.
-native wavein_realtime_start(fifo[], samplerate, count = sizeof fifo);
+/// Compute the maximum, minimum, sum and sum of squares of the wavein value
+/// over several samples for channels A and B.
+/// You have to call wavein_start() before calling this function.
+stock wavein_aggregate(&sumA = 0, &sumB = 0,
+                       &maxA = 0, &maxB = 0,
+                       &minA = 0, &minB = 0,
+                       &sqsumA = 0, &sqsumB = 0,
+                       &Fixed: avgA = FIX(0.0), &Fixed: avgB = FIX(0.0),
+                       count = 1000)
+{
+    new bufA{4}, bufB{4};
+    
+    sumA = 0; sumB = 0;
+    maxA = cellmin; maxB = cellmin;
+    minA = cellmax; minB = cellmax;
+    sqsumA = 0; sqsumB = 0;
+    
+    new i = 0;
+    while (i < count)
+    {
+        wavein_read(bufA, bufB);
+        
+        for (new j = 0; j < 4 && i < count; j++, i++)
+        {
+            sumA += bufA{j};
+            sumB += bufB{j};
+            if (bufA{j} > maxA) maxA = bufA{j};
+            if (bufB{j} > maxB) maxB = bufB{j};
+            if (bufA{j} < minA) minA = bufA{j};
+            if (bufB{j} < minB) minB = bufB{j};
+            sqsumA += bufA{j} * bufA{j};
+            sqsumB += bufB{j} * bufB{j};
+        }
+    }
+    
+    avgA = (Fixed:sumA) / (Fixed:count);
+    avgB = (Fixed:sumB) / (Fixed:count);
+}
 
-/// Fetch samples from the continuous capture buffer.
-/// You must call this function periodically to fetch the new samples.
-/// If the buffer overruns, the capture will stop and this function will return
-/// false.
-native bool: wavein_realtime_read(chA{}, chB{} = {0}, chC{} = {0}, chD{} = {0},
-    countA = sizeof chA, countB = sizeof chB, countC = sizeof chC, countD = sizeof chD);
-
-native wavein_realtime_stop();
-
-/// Start a realtime logic level capture. The logic signals will be compressed
-/// using run-length-encoding. The fifo is used as a temporary storage and
-/// must be atleast 1kB (256 cells). Samplerate is always 500kHz.
-//native wavein_logic_start(fifo[], count = sizeof fifo);
-
-/// Fetch one event from the realtime logic signal buffer.
-/// microseconds: time passed since last event
-/// levels: the new levels of the channels, in the 4 lowest bits.
-/// If the buffer overruns, the capture will stop and this function will return
-/// false.
-//native bool: wavein_logic_read(&microseconds, &levels);
-
-//native wavein_logic_stop();
+/// Automatically select the ADC range based on the input signal level.
+/// Keeps other settings the same, so you have to call config_chX() first
+/// to set the coupling and offset.
+stock wavein_autorange(bool: chA = true, bool: chB = true, low_threshold = 30, high_threshold = 110)
+{
+    new ADCCoupling: coupleA, ADCRange: rangeA, offsetA;
+    getconfig_chA(coupleA, rangeA, offsetA);
+    
+    new ADCCoupling: coupleB, ADCRange: rangeB, offsetB;
+    getconfig_chB(coupleB, rangeB, offsetB);
+    
+    new bool: changed, iters = 0;
+    do
+    {
+        changed = false;
+        iters++;
+    
+        new minA, minB, maxA, maxB;
+        wavein_start();
+        wavein_aggregate(.minA = minA, .minB = minB, .maxA = maxA, .maxB = maxB);
+        
+        new deltaA = max(offsetA - minA, maxA - offsetA);
+        new deltaB = max(offsetB - minB, maxB - offsetB);
+        
+        if (chA)
+        {
+            if (deltaA > high_threshold && rangeA < ADC_10V)
+            { rangeA++; changed = true; }
+            else if (deltaA < low_threshold && rangeA > ADC_50mV)
+            { rangeA--; changed = true; }
+        }
+        
+        if (chB)
+        {
+            if (deltaB > high_threshold && rangeB < ADC_10V)
+            { rangeB++; changed = true; }
+            else if (deltaB < low_threshold && maxB < 200 && rangeB > ADC_50mV)
+            { rangeB--; changed = true; }
+        }
+        
+        if (changed)
+        {
+            if (chA)
+                config_chA(coupleA, rangeA, offsetA);
+            
+            if (chB)
+                config_chB(coupleB, rangeB, offsetB);
+            
+            delay_ms(1);
+        }
+    } while (changed && iters < 10);
+}

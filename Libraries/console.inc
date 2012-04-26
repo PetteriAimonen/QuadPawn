@@ -30,26 +30,45 @@ stock scroll_down(lines)
 /// Print text to console. Linefeeds (\n) switch to next line, as
 /// does writing past the edge of the console. When the bottom-most
 /// line is full, the console scrolls down.
-stock print(const str{})
+stock print(const str{}, bool:wordwrap = true)
 {
     new strpos = 0;
-    new linepos = 0;
     new line{50};
     
-    do
+    while (str{strpos} != 0)
     {
-        new end = cons_cols - cons_col;
-        while (linepos < end && str{strpos} != 0 && str{strpos} != '\n')
-            line{linepos++} = str{strpos++};
+        new cutpos = strchr(str, '\n', strpos);
         
-        if (linepos != 0)
+        if (cutpos == -1)
+            cutpos = strlen(str);
+        
+        new cols = cons_cols - cons_col;
+        if (cutpos - strpos > cols)
         {
-            line{linepos} = 0;
+            cutpos = strpos + cols;
+
+            if (wordwrap)
+            {
+                new wrappos = max(
+                    strrchr(str, ' ', cutpos),
+                    strrchr(str, '-', cutpos) + 1
+                );
+            
+                if (wrappos > strpos || (wrappos == strpos && cons_col != 0))
+                    cutpos = wrappos;
+            }
+        }
+        
+        if (cutpos != strpos)
+        {
+            strmid(line, str, strpos, cutpos - strpos);
+            
             draw_text(line,
                         cons_col * fontwidth + cons_x,
                         cons_row * fontheight + cons_y,
                         cons_fg, cons_bg);
-            cons_col += linepos;
+            cons_col += cutpos - strpos;
+            strpos = cutpos;
         }
         
         if (str{strpos} != 0)
@@ -59,17 +78,22 @@ stock print(const str{})
         
             cons_row -= 1;
             cons_col = 0; 
-            linepos = 0;
             
-            if (str{strpos} == '\n')
+            if (str{strpos} == '\n' || str{strpos} == ' ')
                 strpos++;
         }
-    } while (str{strpos} != 0);
+    }
 }
 
-/// Convenience wrapper
+/// Convenience wrappers
 stock println(const str{})
 {
     print(str);
     print("\n");
+}
+
+stock printsp(const str{})
+{
+    print(str);
+    print(" ");
 }

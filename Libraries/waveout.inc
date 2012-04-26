@@ -23,24 +23,35 @@ stock waveout_voltage(Fixed: voltage)
 {
     static buffer[1];
     buffer[0] = fround(voltage * waveout_scale);
-    waveout_analog(buffer, 1);
+    waveout_analog(buffer, 10000);
+    delay_ms(1);
 }
 
 /// Helper function that sets up a temp buffer so that we don't emit spurious
 /// stuff while updating the waveform. Also, returns the real samplerate.
 static stock waveout_temporary(samplerate, offset)
 {
-    // Max. samplerate for accurate output freq seems to be about 4MHz.
-    // At samplerates higher than this, the DMA or the DAC starts to lag
-    // and the actual samplerate is lower than what we try to set.
-    const max_samplerate = 4000000;
-    if (samplerate > max_samplerate) samplerate = max_samplerate;
-
     // Use a temp buffer so that we don't emit spurious stuff while updating
     // the waveform. Also, this lets us determine the real samplerate.
     static tmp[1];
     tmp[0] = offset;
     samplerate = waveout_analog(tmp, samplerate);
+    return samplerate;
+}
+
+stock select_samplerate(bufsize, frequency)
+{
+    new samplerate = frequency * bufsize;
+    
+    // Max. samplerate for accurate output freq seems to be about 4MHz.
+    // At samplerates higher than this, the DMA or the DAC starts to lag
+    // and the actual samplerate is lower than what we try to set.
+    const max_samplerate = 4000000;
+    if (samplerate > max_samplerate) samplerate = max_samplerate;
+    
+    if (samplerate / frequency < 10)
+        samplerate = samplerate - samplerate % frequency;
+    
     return samplerate;
 }
 
@@ -52,8 +63,8 @@ static stock waveout_temporary(samplerate, offset)
 stock waveout_sinewave(buffer[], frequency, amplitude = 2000, offset = 2047,
                        &realbufsize = 0, bufsize = sizeof buffer)
 {
-    new samplerate = frequency * bufsize;
-    samplerate = waveout_temporary(samplerate, offset);
+    new orig_samplerate = select_samplerate(bufsize, frequency);
+    new samplerate = waveout_temporary(orig_samplerate, offset);
 
     // Try to have a whole number of repeats in the buffer to avoid glitches
     new repeats = bufsize * frequency / samplerate;
@@ -71,15 +82,15 @@ stock waveout_sinewave(buffer[], frequency, amplitude = 2000, offset = 2047,
     }
 
     // And set the table for the waveout
-    return waveout_analog(buffer, samplerate, realbufsize);
+    return waveout_analog(buffer, orig_samplerate, realbufsize);
 }
 
 /// Set the waveout to generate triangle wave
 stock waveout_triangle(buffer[], frequency, amplitude = 2000, offset = 2047,
                        Fixed: duty = FIX(0.5), &realbufsize = 0, bufsize = sizeof buffer)
 {
-    new samplerate = frequency * bufsize;
-    samplerate = waveout_temporary(samplerate, offset);
+    new orig_samplerate = select_samplerate(bufsize, frequency);
+    new samplerate = waveout_temporary(orig_samplerate, offset);
     
     // Try to have a whole number of repeats in the buffer to avoid glitches
     new repeats = bufsize * frequency / samplerate;
@@ -99,6 +110,6 @@ stock waveout_triangle(buffer[], frequency, amplitude = 2000, offset = 2047,
             buffer[i] = offset + amplitude - fround(downramp * (pos - corner));
     }
     
-    return waveout_analog(buffer, samplerate, realbufsize);
+    return waveout_analog(buffer, orig_samplerate, realbufsize);
 }
 

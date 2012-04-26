@@ -1,4 +1,4 @@
-/** This is a basic library to read the buttons & scrollers of DSO Quad
+/** This is a basic library to read the buttons and scrollers of DSO Quad
  * in a polling manner. For an event-driven approach, see menu.inc.
  *
  * Both approaches can be used in a single program: the polling approach

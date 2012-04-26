@@ -42,6 +42,9 @@ stock bool:inifile_get(File: file, const optname{}, value{}, maxlength = sizeof 
 stock inifile_write(File: file, const optname{}, const value{})
 {
     f_write(file, optname);
+    for (new i = strlen(optname); i < 20; i++)
+        f_write(file, " ");
+    
     f_write(file, " = ");
     f_write(file, value);
     f_write(file, "\r\n");
@@ -78,3 +81,36 @@ stock inifile_writefixed(File: file, const optname{}, Fixed: value)
 {
     inifile_write(file, optname, strf(value));
 }
+
+/// Read a fixed point array
+stock bool:inifile_getfarray(File: file, const optname{}, Fixed: value[], count = sizeof value)
+{
+    new tmp{256}, tmp2{16};
+    if (!inifile_get(file, optname, tmp)) return false;
+    
+    for (new i = 0; i < count - 1; i++)
+    {
+        if (!split(tmp2, tmp)) return false;
+        value[i] = strfixed(tmp2);
+    }
+    value[count - 1] = strfixed(tmp);
+    
+    return true;
+}
+
+/// Write a fixed point array
+stock inifile_writefarray(File: file, const optname{}, const Fixed: value[], count = sizeof value)
+{
+    new tmp{256} = "", tmp2{16};
+    
+    for (new i = 0; i < count; i++)
+    {
+        tmp2 = strf(value[i]);
+        strpad(tmp2, 10);
+        strcat(tmp, tmp2);
+        strcat(tmp, " ");
+    }
+    
+    inifile_write(file, optname, tmp);
+}
+

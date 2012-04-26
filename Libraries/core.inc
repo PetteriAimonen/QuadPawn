@@ -12,6 +12,9 @@ native setarg(arg, index=0, value);
 /// Clear an array
 native memset(array[], value = 0, count = sizeof array);
 
+/// Copy array into another
+native memcpy(dest[], const src[], count = sizeof dest);
+
 stock min(value1, value2)
     return (value1 <= value2) ? value1 : value2;
 

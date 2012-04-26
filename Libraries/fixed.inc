@@ -67,10 +67,21 @@ forward operator%(Fixed:oper1, oper2); // Forbidden
 forward operator%(oper1, Fixed:oper2); // Forbidden
 
 /// Integer part of a number
-stock ftrunc(Fixed:value) return (_:value) / 65536;
-
-/// Fractional part of a number
-stock Fixed:frac(Fixed: value) return Fixed:(abs(_:value) & 0xFFFF);
+/// +1.6 => +1, -1.6 => -1
+stock ftrunc(Fixed:value)
+{
+    new result = (_:value) / 65536;
+    if (result < 0)
+        result += 1;
+    return result;
+}
+    
+/// Fractional part of a number, as positive value.
+/// +1.6 => 0.6, -1.6 => 0.6
+stock Fixed:frac(Fixed: value)
+{
+    return Fixed:(abs(_:value) & 0xFFFF);
+}
 
 /// Exponent function
 native Fixed:exp(Fixed:exponent);
@@ -143,7 +154,7 @@ stock Fixed:log10(Fixed: value)
 /// Calculate base-10 logarithm of an integer value
 stock Fixed:log10i(value)
 {
-    return (log(Fixed:value) - FIX(11.09035)) / log_of_10;
+    return (log(Fixed:value) + FIX(11.09035)) / log_of_10;
 }
 
 /// Absolute value of a fixed point number
@@ -164,5 +175,11 @@ stock Fixed: fclamp(Fixed: value, Fixed: min = fix16_min, Fixed: max = fix16_max
         return max;
     else
         return value;
+}
+
+/// Linear interpolation between two values
+stock Fixed: interpolate(Fixed: x, Fixed: x1, Fixed: y1, Fixed: x2, Fixed: y2)
+{
+    return y1 + (x - x1) * (y2 - y1) / (x2 - x1);
 }
 

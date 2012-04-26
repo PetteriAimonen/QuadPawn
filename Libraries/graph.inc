@@ -21,64 +21,90 @@ new Color: graph_minor_grid_color = RGB(128,0,0);
 /// Color of the border around graph
 new Color: graph_border = white;
 
-/// Color of the tick labels
-new Color: graph_xcolor = white, Color: graph_ycolor = white;
-new Color: graph_y2color = green;
+/// This defines a pseudo-struct for configuring the graph axes
+#define GraphAxis [
+    /// Color of the tick marks and tick labels
+    Color: .tickcolor,
+    
+    /// Coordinate range for the axis.
+    Fixed: .min,
+    Fixed: .max,
+    
+    /// Interval between the major grid lines
+    Fixed: .major,
+    
+    /// Number of minor grid lines per each major line.
+    /// I.e. major grid 0.5, minor grid 5 => minor grid interval 0.1.
+           .minor,
+    
+    /// Set to true to use a logarithmic scale for the axis.
+    /// The meaning of min, max and point coordinates changes: you should set
+    /// them to log10 of the actual value. Use log10i() if the values are
+    /// larger than 10000.    
+    bool:  .log,
+    
+    /// This is used internally to tell apart the x and y axes. You shouldn't
+    /// change its value.
+    bool: .vertical
+]
 
-/// Scaling info for the X axis:
-/// xmin, xmax: the minimum and maximum value of the X axis
-/// xmajor: the step between major gridlines
-/// xminor: the divider of xmajor to get minor grid step
-new Fixed: graph_xmin = FIX(0.0), Fixed: graph_xmax = FIX(250.0);
-new Fixed: graph_xmajor = FIX(50.0), graph_xminor = 5;
+new graph_xaxis[GraphAxis] = [_:white, _:FIX(0.0), _:FIX(250.0), _:FIX(50.0), 5, false, false];
+new graph_yaxis[GraphAxis] = [_:white, _:FIX(0.0), _:FIX(250.0), _:FIX(50.0), 5, false, true];
 
-/// xlog: use logarithmic X axis
-/// The meaning of xmin, xmax and x coordinates changes: you should set them
-/// to log10 of the actual value. Use log10i() if the values are larger than
-/// 10000.
-new bool: graph_xlog = false;
+/// Y2 axis is disabled when its max == min.
+new graph_y2axis[GraphAxis] = [_:yellow, _:FIX(0.0), _:FIX(0.0), _:FIX(50.0), 5, false, true];
 
-/// Scaling for the left Y axis
-new Fixed: graph_ymin = FIX(0.0), Fixed: graph_ymax = FIX(250.0);
-new Fixed: graph_ymajor = FIX(50.0), graph_yminor = 5;
-new bool: graph_ylog = false;
-
-/// Scaling for the right Y axis (set y2min = y2max to disable)
-new Fixed: graph_y2min = FIX(0.0), Fixed: graph_y2max = FIX(0.0);
-new Fixed: graph_y2major = FIX(20.0);
-new bool: graph_y2log = false;
-
-
-/// Compute pixel coordinate along an axis
-stock Fixed: graph_getpixels(Fixed: value, Fixed: min, Fixed: max, start, length)
+stock graph_getaxislength(bool: vertical, &start, &length)
 {
-    if (value > max) value = max;
-    if (value < min) value = min;
-    return start + (value - min) * (length / (max - min));
-}
-
-/// Compute pixel coordinate for x axis
-stock Fixed: graph_getx(Fixed: value)
-    return graph_getpixels(value, graph_xmin, graph_xmax, graph_x, graph_w);
-
-/// Compute pixel coordinate for the left axis
-stock Fixed: graph_gety(Fixed: value)
-    return graph_getpixels(value, graph_ymin, graph_ymax, graph_y, graph_h);
-
-/// Compute pixel coordinate for y2 axis
-stock Fixed: graph_gety2(Fixed: value)
-    return graph_getpixels(value, graph_y2min, graph_y2max, graph_y, graph_h);
-
-static stock Fixed: align(Fixed: value, Fixed: multiple)
-{
-    if (value >= 0)
+    if (vertical)
     {
-        return value - value % multiple;
+        start = graph_y;
+        length = graph_h;
     }
     else
     {
-        return value + value % multiple;
+        start = graph_x;
+        length = graph_w;
     }
+}
+
+/// Compute pixel coordinate along an axis
+stock Fixed: graph_topixels(Fixed: value, const axis[GraphAxis])
+{
+    new start, length;
+    graph_getaxislength(axis[.vertical], start, length);
+    
+    if (value > axis[.max]) value = axis[.max];
+    if (value < axis[.min]) value = axis[.min];
+    return start + (value - axis[.min]) * (length / (axis[.max] - axis[.min]));
+}
+
+stock Fixed: graph_getx(Fixed: value)
+    return graph_topixels(value, graph_xaxis);
+
+stock Fixed: graph_gety(Fixed: value)
+    return graph_topixels(value, graph_yaxis);
+
+stock Fixed: graph_gety2(Fixed: value)
+    return graph_topixels(value, graph_y2axis);
+    
+/// Compute graph coordinate along an axis from pixel coordinate.
+stock Fixed: graph_frompixels(Fixed: pixels, const axis[GraphAxis])
+{
+    new start, length;
+    graph_getaxislength(axis[.vertical], start, length);
+    
+    return axis[.min] + (pixels - start) * ((axis[.max] - axis[.min]) / length);
+}
+    
+static stock Fixed: first_major(const axis[GraphAxis])
+{
+    new Fixed: value = axis[.min];
+    new Fixed: multiple = axis[.major];
+    if (value % multiple == 0)
+        return value;
+    
+    return value + multiple - value % multiple;
 }
 
 stock get_ticklabel(Fixed: value, bool: log)
@@ -114,7 +140,6 @@ stock get_ticklabel(Fixed: value, bool: log)
             suffix{0} = 'm';
         }
         
-        result = strf(value, 0);
         result{0} = '1';
         new i;
         for (i = 1; value > 0; i++, value--)
@@ -130,7 +155,7 @@ stock get_ticklabel(Fixed: value, bool: log)
             value = value / 1000;
             suffix{0} = 'k';
         }
-        else if (absf(value) < 1 && value != 0)
+        else if (absf(value) < FIX(0.1) && value != 0)
         {
             value = value * 1000;
             suffix{0} = 'm';
@@ -150,147 +175,153 @@ stock get_ticklabel(Fixed: value, bool: log)
     strcat(result, suffix);
     return result;
 }
+
+/// This is used to speed up the grid drawing.
+static Color: y_column[240];
+
+/// Draws the tickmarks and borders for the graph.
+/// You probably want to clear the screen before calling this.
+stock draw_axes()
+{
+    memset(_:y_column, _:graph_bg);
     
+    // X axis ticks
+    for (new Fixed: x = first_major(graph_xaxis); x <= graph_xaxis[.max]; x += graph_xaxis[.major])
+    {
+        new label{12};
+        label = get_ticklabel(x, graph_xaxis[.log]);
+        
+        new xpix = fround(graph_getx(x));
+        xpix -= strlen(label) * fontwidth / 2;
+        
+        draw_text(label, xpix, graph_y - fontheight, graph_xaxis[.tickcolor]);
+    }
+    
+    // Y axis ticks
+    for (new Fixed: y = first_major(graph_yaxis); y <= graph_yaxis[.max]; y += graph_yaxis[.major])
+    {
+        new label{12};
+        label = get_ticklabel(y, graph_yaxis[.log]);
+        
+        new xpos = graph_x - strlen(label) * fontwidth - 5;
+        new ypix = fround(graph_gety(y));
+        y_column[ypix] = graph_major_grid_color;
+        ypix -= fontheight / 2;
+
+        draw_text(label, xpos, ypix, graph_yaxis[.tickcolor]);
+        
+        // Draw minor gridlines
+        new Fixed: increment = graph_yaxis[.major] / graph_yaxis[.minor];
+        for (new i = 0; i < graph_yaxis[.minor]; i++)
+        {
+            ypix = fround(graph_gety(y + i * increment));
+            if (y_column[ypix] == graph_bg)
+                y_column[ypix] = graph_minor_grid_color;
+        }
+    }
+    
+    // Y2 axis ticks
+    if (graph_y2axis[.min] != graph_y2axis[.max])
+    {
+        for (new Fixed: y = first_major(graph_y2axis); y <= graph_y2axis[.max]; y += graph_y2axis[.major])
+        {
+            new label{12};
+            label = get_ticklabel(y, graph_y2axis[.log]);
+            
+            new ypix = fround(graph_gety2(y));
+            ypix -= fontheight / 2;
+            
+            draw_text(label, graph_x + graph_w + 5, ypix, graph_y2axis[.tickcolor]);
+        }
+    }
+    
+    // Graph border
+    draw_rectangle(graph_x - 1, graph_y - 1, graph_w + 1, graph_h + 1, graph_border);
+}
+
+/// Get the closest gridline to pos. Returns the graph coordinate.
+static stock Fixed: closest_gridline(Fixed: pos, Fixed: increment)
+{
+    pos += increment / 2;
+    return pos - pos % increment;
+}
+
+/// Get the closest minor gridline, with special handling for log scale.
+static stock Fixed: closest_minorline(Fixed: pos, axis[GraphAxis])
+{
+    if (!axis[.log])
+        return closest_gridline(pos, axis[.major] / axis[.minor]);
+    
+    new Fixed: prev_major = pos - pos % axis[.major];
+    new Fixed: step = axis[.major] / (axis[.minor]);
+    new Fixed: delta = exp((pos - prev_major - axis[.major]) * log_of_10);
+    new i = fround(delta / step);
+    return prev_major + 1 + log10(i * step);
+}
+
+/// Render one column of the graph, starting at x0, y0. This is used for
+/// redrawing the graph and the contents in one go without flicker.
+stock render_graph_column(x0, y0, Color: column[], height = sizeof column)
+{
+    if (x0 <= graph_x || x0 >= graph_x + graph_w)
+        return;
+    
+    new Fixed: xcoord = graph_frompixels(x0, graph_xaxis);
+    if (x0 == fround(graph_getx(closest_gridline(xcoord, graph_xaxis[.major]))))
+    {
+        // Major X line
+        memset(_:column, _:graph_major_grid_color, height);
+    }
+    else if (x0 == fround(graph_getx(closest_minorline(xcoord, graph_xaxis))))
+    {
+        // Minor X line
+        memcpy(_:column, _:y_column[y0], height);
+        for (new i = 0; i < height; i++)
+        {
+            if (column[i] == graph_bg)
+                column[i] = graph_minor_grid_color;
+        }
+    }
+    else
+    {
+        // Between X lines, draw Y grid
+        memcpy(_:column, _:y_column[y0], height);
+    }
+}
+
 /// Clear the graph area and draw grid, borders and ticks.
 stock clear_graph()
 {
-    // Reset the draw function "previous value" variables
-    graph_draw(fix16_min, fix16_min);
-    graph_drawy2(fix16_min, fix16_min);
+    draw_axes();
     
-    fill_rectangle(graph_x, graph_y, graph_w, graph_h, graph_bg);
-    
-    // Draw x axis grid
-    for (new Fixed: x = align(graph_xmin, graph_xmajor); x <= graph_xmax; x += graph_xmajor)
+    new Color: column[240];
+    for (new x = graph_x; x < graph_x + graph_w; x++)
     {
-        new xpix = fround(graph_getx(x));
-        
-        if (x >= graph_xmin)
-        {
-            // Major line
-            drawline(xpix, graph_y, xpix, graph_y + graph_h, graph_major_grid_color, true);
-            
-            // Tick label
-            new label{12};
-            label = get_ticklabel(x, graph_xlog);
-            xpix -= strlen(label) * fontwidth / 2;
-            draw_text(label, xpix, graph_y - fontheight, graph_xcolor);
-        }
-        
-        // Minor lines
-        new Fixed: step = graph_xmajor / graph_xminor;
-        new Fixed: mx;
-        for (new i = 1; i < graph_xminor; i++)
-        {
-            new Fixed: pos = i * step;
-            if (graph_xlog)
-                mx = x + 1 + log10(pos);
-            else
-                mx = x + pos;
-        
-            xpix = fround(graph_getx(mx));
-            drawline(xpix, graph_y, xpix, graph_y + graph_h, graph_minor_grid_color, true);
-        }
+        render_graph_column(x, graph_y, column, graph_h);
+        putcolumn(x, graph_y, column, graph_h);
     }
-    
-    // Draw y2 axis grid
-    if (graph_y2min != graph_y2max)
-    {
-        for (new Fixed: y = align(graph_y2min, graph_y2major); y <= graph_y2max; y += graph_y2major)
-        {
-            new ypix = fround(graph_gety2(y));
-            
-            if (y >= graph_y2min)
-            {
-                // Major line
-                drawline(graph_x, ypix, graph_x + graph_w, ypix, graph_y2color, true);
-                
-                // Tick label
-                new label{12};
-                label = get_ticklabel(y, graph_y2log);
-                ypix -= fontheight / 2;
-                draw_text(label, graph_x + graph_w + 3, ypix, graph_y2color);
-            }
-        }
-    }
-    
-    // Draw y axis grid
-    for (new Fixed: y = align(graph_ymin, graph_ymajor); y <= graph_ymax; y += graph_ymajor)
-    {
-        new ypix = fround(graph_gety(y));
-        
-        if (y >= graph_ymin)
-        {
-            // Major line
-            drawline(graph_x, ypix, graph_x + graph_w, ypix, graph_major_grid_color, true);
-            
-            // Tick label
-            new label{12};
-            label = get_ticklabel(y, graph_ylog);
-            new xpos = graph_x - strlen(label) * fontwidth - 3;
-            ypix -= fontheight / 2;
-            draw_text(label, xpos, ypix, graph_ycolor);
-        }
-        
-        // Minor lines
-        new Fixed: step = graph_ymajor / graph_yminor;
-        new Fixed: my;
-        for (new i = 1; i < graph_yminor && my < graph_ymax; i++)
-        {
-            new Fixed: pos = i * step;
-            if (graph_ylog)
-                my = y + 1 + log10(pos);
-            else
-                my = y + pos;
-
-            ypix = fround(graph_gety(my));
-            drawline(graph_x, ypix, graph_x + graph_w, ypix, graph_minor_grid_color, true);
-        }
-    }
-    
-    draw_rectangle(graph_x, graph_y, graph_w, graph_h, graph_border);
 }
 
-/// Draw a line on the graph.
-/// If x2 and y2 are not specified, continue from previous point.
-/// You can pass x1 = y1 = fix16_min to make a break in the graph.
-stock graph_draw(Fixed: x1, Fixed: y1, Fixed: x2 = fix16_min, Fixed: y2 = fix16_min, Color: color = Color: cellmin)
+/// Draw a line on the graph, continuing from a previous point.
+/// You can initialize prevx to fix16_min, so the function knows to automatically write the first x coordinate there.
+stock graph_draw(Fixed: x, Fixed: y, &Fixed: prevx, &Fixed: prevy, Color: color = green)
 {
-    static Fixed: graph_prevx = fix16_min, Fixed: graph_prevy = fix16_min;
-
-    if (x2 == fix16_min)
-        x2 = graph_prevx;
-        
-    if (y2 == fix16_min)
-        y2 = graph_prevy;
+    if (prevx != fix16_min)
+    {
+        drawline_aa(graph_getx(prevx), graph_gety(prevy), graph_getx(x), graph_gety(y), color);
+    }
     
-    if (color == Color:cellmin)
-        color = graph_ycolor;
-    
-    graph_prevx = x1;
-    graph_prevy = y1;
-    
-    if (x2 != fix16_min && x1 != fix16_min)
-        drawline_aa(graph_getx(x1), graph_gety(y1), graph_getx(x2), graph_gety(y2), color);
+    prevx = x;
+    prevy = y;
 }
 
-/// Draw a line on the graph, using y2 coordinates
-stock graph_drawy2(Fixed: x1, Fixed: y1, Fixed: x2 = fix16_min, Fixed: y2 = fix16_min, Color: color = Color:cellmin)
+stock graph_drawy2(Fixed: x, Fixed: y, &Fixed: prevx, &Fixed: prevy, Color: color = yellow)
 {
-    static Fixed: graph_prevx = fix16_min, Fixed: graph_prevy = fix16_min;
-
-    if (x2 == fix16_min)
-        x2 = graph_prevx;
-        
-    if (y2 == fix16_min)
-        y2 = graph_prevy;
+    if (prevx != fix16_min)
+    {
+        drawline_aa(graph_getx(prevx), graph_gety2(prevy), graph_getx(x), graph_gety2(y), color);
+    }
     
-    if (color == Color:cellmin)
-        color = graph_y2color;
-    
-    graph_prevx = x1;
-    graph_prevy = y1;
-
-    if (x2 != fix16_min && x1 != fix16_min)
-        drawline_aa(graph_getx(x1), graph_gety2(y1), graph_getx(x2), graph_gety2(y2), color);
+    prevx = x;
+    prevy = y;
 }

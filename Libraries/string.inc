@@ -31,9 +31,9 @@ stock strcpy(dest{}, const source{}, maxlength=sizeof dest)
 
 /// Locate a character in a string. Returns position as 0-based index, or -1
 /// if not found.
-stock strchr(const str{}, character)
+stock strchr(const str{}, character, start = 0)
 {
-    new pos = 0;
+    new pos = start;
     while (str{pos} != 0)
     {
         if (str{pos} == character) return pos;
@@ -42,9 +42,23 @@ stock strchr(const str{}, character)
     return -1;
 }
 
+/// Locate the last instance of a character in a string.
+/// Returns position as 0-based index, or -1 if not found.
+stock strrchr(const str{}, character, end = cellmax)
+{
+    new pos = 0;
+    new result = -1;
+    while (str{pos} != 0 && pos < end)
+    {
+        if (str{pos} == character) result = pos;
+        pos++;
+    }
+    return result;
+}
+
 /// Get the middle portion of a string
 /// "foobar", 1, 3  =>  "oob"
-stock mid(dest{}, const str{}, start, length)
+stock strmid(dest{}, const str{}, start, length)
 {
     for (new i = 0; i < length; i++)
     {
@@ -54,10 +68,26 @@ stock mid(dest{}, const str{}, start, length)
     dest{length} = 0;
 }
 
+/// Pad a string to given length by prepending characters.
+stock strpad(dest{}, length, chr = ' ')
+{
+    new slen = strlen(dest);
+    new count = length - slen;
+    if (count <= 0) return;
+
+    for (new i = slen; i >= 0; i--)
+        dest{i + count} = dest{i};
+    
+    for (new i = 0; i < count; i++)
+        dest{i} = chr;
+}
+
 /// Split the string to two parts by some separator. The initial part is
 /// moved to dest and remaining part is left in the source. The separator
 /// is removed. Returns false if separator is not found or dest is too small.
-stock bool: split(dest{}, source{}, separator{}=" ", maxlength=sizeof dest)
+/// If coalesce is true, repeated separators are regarded as one.
+stock bool: split(dest{}, source{}, separator{}=" ", bool:coalesce = true,
+maxlength=sizeof dest)
 {
     maxlength *= 4;
     maxlength--;
@@ -77,7 +107,13 @@ stock bool: split(dest{}, source{}, separator{}=" ", maxlength=sizeof dest)
     
     dest{pos} = 0;
     
-    pos++; // Remove separator
+    // Remove separator(s)
+    pos++;
+    if (coalesce)
+    {
+        while (strchr(separator, source{pos}) != -1)
+            pos++;
+    }
     
     new pos2 = 0;
     while (source{pos} != 0)
@@ -133,6 +169,14 @@ stock str(value)
     return dest;
 }
 
+/// Return integer converted to hex string, shorthand for strval
+stock hex(value)
+{
+    new dest{12};
+    valstr(dest, value, .base = 16);
+    return dest;
+}
+
 /// Return fixed point value converted to string, with up to 4 decimals
 stock strf(Fixed: value, decimals = 4)
 {
@@ -144,14 +188,30 @@ stock strf(Fixed: value, decimals = 4)
         return result;
     }
     
-    valstr(result, ftrunc(value)); 
-    strcat(result, ".");
-    
     new scale = 1;
     for (new i = 0; i < decimals; i++) scale *= 10;
     
+    new intval = ftrunc(value);
+    new fracval = fround(frac(value) * scale);
+    
+    if (fracval >= scale)
+    {
+        intval++;
+        fracval = 0;
+    }
+    
+    if (intval == 0 && value < 0)
+    {
+        result = "-0.";
+    }
+    else
+    {
+        valstr(result, intval); 
+        strcat(result, ".");
+    }
+    
     new fracpart{8};
-    valstr(fracpart, fround(frac(value) * scale), .minlength = decimals);
+    valstr(fracpart, fracval, .minlength = decimals);
     strcat(result, fracpart);
     
     return result;
@@ -168,14 +228,14 @@ stock Fixed: strfixed(const str{})
     if (str{pos} == '.' || str{pos} == ',')
     {
         new tmp{5};
-        mid(tmp, str, pos + 1, 4);
+        strmid(tmp, str, pos + 1, 4);
         while (strlen(tmp) < 4) strcat(tmp, "0");
         
         fracpart = strval(tmp);
     }
     
     new Fixed: result = fixed(intpart);
-    result = result + fracpart * FIX(6.5536);
+    result = result + (Fixed:fracpart) * FIX(6.5536);
     return result;
 }
 
