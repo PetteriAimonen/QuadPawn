@@ -6,7 +6,7 @@ NAME = PAWN_APP
 
 # Names of the object files (add all .c files you want to include)
 OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
-	file_selector.o msgbox.o metadata.o debug.o sysmenu.o \
+	file_selector.o msgbox.o metadata.o debug.o \
 	fatfs_glue.o ff.o \
 	amx.o amxexec.o amxaux.o amxpool.o amx_debug.o \
 	amx_draw.o amx_core.o amx_string.o amx_fixed.o amx_wavein.o \
@@ -56,7 +56,10 @@ clean:
 $(NAME).HEX: build/$(NAME).elf
 	$(CP) -O ihex $< $@
 
-build/$(NAME).elf: ${_OBJS}
+baselibc/libc.a: baselibc/Makefile
+	make -C baselibc
+
+build/$(NAME).elf: ${_OBJS} baselibc/libc.a
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ ${_OBJS} ${LIBS}
 
 # Rebuild all objects if any header changes
