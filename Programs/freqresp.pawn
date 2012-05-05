@@ -1,3 +1,5 @@
+#pragma dynamic 512
+
 #include <graph>
 #include <fourier>
 #include <console>
