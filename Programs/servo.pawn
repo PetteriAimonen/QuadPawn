@@ -1,0 +1,39 @@
+
+main()
+{
+    draw_menubar("Quit", "Min", "Max", "");
+    
+    draw_text("Servo tester", 200, 200, .fg = green, .center = true);
+    
+    draw_text("Pulse length:", 100, 160);
+    
+    new pulse = 1500; // 1.5 ms pulse
+    new period = 20000; // 20 ms period
+   
+//     waveout_digital(100, FIX(0.85));
+    while (!get_keys(BUTTON1))
+    {
+        if (held_keys(SCROLL2_LEFT))
+            pulse -= 1;
+        
+        if (held_keys(SCROLL2_RIGHT))
+            pulse += 1;
+        
+        if (get_keys(BUTTON2))
+            pulse = 1000;
+        
+        if (get_keys(BUTTON3))
+            pulse = 2000;
+        
+        pulse = clamp(pulse, 500, 2500);
+        
+        waveout_digital(1000000 / period, FIX(1.0) - fixed(pulse) / fixed(period));
+    
+        new buffer{20};
+        buffer = str(pulse);
+        strcat(buffer, " us  ");
+        draw_text(buffer, 200, 160, .bg = black);
+        
+        delay_ms(1);
+    }
+}

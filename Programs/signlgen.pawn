@@ -1,0 +1,115 @@
+#include <fixed>
+#include <draw>
+#include <menu>
+#include <buttons>
+#include <wavein>
+#include <waveout>
+#include <string>
+
+new outbuf[350];
+new inbufA{350};
+new inbufB{350};
+
+new freq_units[]{} = ["Hz", "kHz"];
+new freq_scales[] = [1, 1000];
+new freq_minlimits[] = [10, 1];
+new freq_maxlimits[] = [1000000, 1000];
+new out_freq = 400, freqrange = 0;
+
+new waveforms[]{} = ["Sine", "Trig"];
+new waveform = 0;
+
+new bool: changed = true;
+
+@button1()
+{
+    changed = true;
+    waveform = (waveform + 1) % sizeof(waveforms);
+}
+
+@scroll2(delta)
+{
+    changed = true;
+    
+    if (delta == 0)
+        freqrange = (freqrange + 1) % sizeof(freq_scales);
+    else
+        out_freq += delta;
+    
+    out_freq = clamp(out_freq, freq_minlimits[freqrange], freq_maxlimits[freqrange]);
+}
+
+/// Helper function for drawing. Plots a pixel at given Y position
+plot(Color: column[], Fixed: ypos, Color: color, maxpos = sizeof column)
+{
+    ypos = fclamp(ypos, FIX(1.0), fixed(maxpos - 2));
+    
+    new intpart = ftrunc(ypos);
+    new Fixed:fracpart = frac(ypos);
+    
+    column[intpart - 1] = blend(color, column[intpart], FIX(1.0) - fracpart);
+    column[intpart] = color;
+    column[intpart + 1] = blend(color, column[intpart + 1], fracpart);
+}
+
+bool:@idle()
+{
+    static outbuf_samplerate;
+    static outbuf_size;
+    static inbuf_samplerate;
+    
+    if (changed)
+    {
+        changed = false;
+    
+        draw_menubar(waveforms[waveform], "", "", "Quit");
+        fill_rectangle(0, 190, 400, 30, black);
+        
+        new buf{10} = "";
+        buf = str(out_freq);
+        strcat(buf, " ");
+        strcat(buf, freq_units[freqrange]);
+        draw_text(buf, 320, 206);
+        
+        new freq = out_freq * freq_scales[freqrange];
+        if (waveform == 0)
+            outbuf_samplerate = waveout_sinewave(outbuf, freq, .realbufsize = outbuf_size);
+        else if (waveform == 1)
+            outbuf_samplerate = waveout_triangle(outbuf, freq, .realbufsize = outbuf_size);
+        else if (waveform == 2)
+            waveout_digital(freq);
+        else if (waveform == 3)
+            waveout_voltage(FIX(1.4));
+        
+        inbuf_samplerate = freq * 175;
+        inbuf_samplerate = wavein_samplerate(inbuf_samplerate);
+        
+        wavein_start(true);
+    }
+    
+    wavein_read(inbufA, inbufB);
+    wavein_start(true);
+    
+    for (new i = 0; i < 350; i++)
+    {
+        new Color: column[160] = [black];
+        
+        new j = i * outbuf_samplerate / inbuf_samplerate;
+        j = j % outbuf_size;
+        plot(column, fixed(outbuf[j]) / 30, darkblue);
+        
+        plot(column, fixed(inbufB{i}) / 2, yellow);
+        plot(column, fixed(inbufA{i}) / 2, green);
+        putcolumn(i, 30, column);
+    }
+    
+    return !get_keys(BUTTON4);
+}
+
+main()
+{
+    config_chA(ADC_DC, ADC_500mV, .offset = 0);
+    config_chB(ADC_DC, ADC_500mV, .offset = 0);
+    wavein_settrigger(Trig_Always);
+}
+

@@ -1,0 +1,29 @@
+#include <console>
+
+main()
+{
+    // 32 characters on each row, 8 rows.
+    println("  0123456789ABCDEF 0123456789ABCDEF");
+    
+    for (new i = 0; i < 8; i++)
+    {
+        print(hex(i * 2));
+        print(" ");
+        
+        for (new j = 0; j < 32; j++)
+        {
+            new buf{2} = {0,0};
+            buf{0} = i * 32 + j;
+            
+            if (buf{0} == '\n' || buf{0} == '\r')
+                buf{0} = ' ';
+            
+            print(buf);
+            
+            if (j == 15)
+                print(" ");
+        }
+        
+        print("\n");
+    }
+}

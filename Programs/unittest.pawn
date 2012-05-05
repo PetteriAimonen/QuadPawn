@@ -1,0 +1,58 @@
+/** Unit tests for the standard library. */
+
+#include <console>
+
+test_num({Fixed, _}: value, {Fixed, _}: expected, const errormsg{})
+{
+    if (value != expected)
+    {
+        print(errormsg); print(": ");
+        print(str(_:value)); print(" vs. ");
+        println(str(_:expected));
+    }
+}
+
+// Usage: TEST_NUM(expression, expected)
+#define TEST_NUM(%1,%2) \
+    test_num(%1, %2, "Test " ... #%1 ... " failed")
+
+test_str(const value{}, const expected{}, const errormsg{})
+{
+    if (!strequal(value, expected))
+    {
+        print(errormsg); print(": ");
+        print(value); print(" vs. "); println(expected);
+    }
+}
+
+// Usage: TEST_STR(expression, expected)
+#define TEST_STR(%1,%2) \
+    test_str(%1, %2, "Test " ... #%1 ... " failed")
+
+main()
+{
+    TEST_NUM(ftrunc(FIX(1.6)), 1);
+    TEST_NUM(ftrunc(FIX(-1.6)), -1);
+    TEST_NUM(ftrunc(FIX(0.5)), 0);
+    TEST_NUM(ftrunc(FIX(-0.5)), 0);
+    
+    TEST_NUM(frac(FIX(1.6)), FIX(0.6));
+    TEST_NUM(frac(FIX(-1.6)), FIX(0.6));
+    
+    TEST_STR(str(-1), "-1");
+    TEST_STR(str(0), "0");
+    TEST_STR(str(1), "1");
+    
+    TEST_STR(strf(FIX(0.0000)), "0.0000");
+    TEST_STR(strf(FIX(0.0001)), "0.0001");
+    TEST_STR(strf(FIX(-0.0001)), "-0.0001");
+    TEST_STR(strf(FIX(1.0001)), "1.0001");
+    TEST_STR(strf(FIX(-1.0001)), "-1.0001");
+    
+    TEST_STR(strf(FIX(0.99999)), "1.0000");
+    TEST_STR(strf(FIX(-0.99999)), "-1.0000");
+    
+    TEST_STR(strf(FIX(-179.99), 1), "-180.0"); 
+    
+    println("Tests complete.");
+}

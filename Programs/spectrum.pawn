@@ -1,0 +1,59 @@
+/** FFT-based spectrum analyzer. */
+
+#include <buttons>
+#include <core>
+#include <draw>
+#include <fixed>
+#include <fourier>
+#include <menu>
+#include <wavein>
+#include <waveout>
+
+new inbuf{2048};
+new Fixed: real_fft[2048];
+new Fixed: imag_fft[2048];
+
+bool:@idle()
+{
+    wavein_read(inbuf);
+    wavein_start();
+    
+    fft(inbuf, real_fft, imag_fft, 2048);
+    
+    real_fft[0] -= fixed(128); // Subtract the DC offset
+    
+    for (new i = 0; i < 400; i++)
+    {
+        new Color: column[200] = [black];
+        
+        // There are more values (1024) than can fit on the screen,
+        // so draw 2 values per column. This makes tight frequency
+        // spikes more visible than just skipping the extra values.
+        new Fixed: maxval = FIX(0.0001);
+        for (new j = 0; j < 2; j++)
+        {
+            new idx = i * 2 + j;
+            new Fixed: val = cabs(real_fft[idx], imag_fft[idx]);
+            if (val > maxval) maxval = val;
+        }
+        
+        new pos = fround(5 * 20 * log10(maxval) + 100);
+        pos = clamp(pos, 0, sizeof(column));
+        memset(_:column, _:green, pos);
+        
+        putcolumn(i, 20, column);
+    }
+    
+    return !get_keys(BUTTON4);
+}
+
+main()
+{
+    draw_menubar("", "", "", "Quit");
+    config_chA(ADC_DC, ADC_50mV);
+//     waveout_digital(100000);
+    waveout_voltage(0);
+    wavein_settrigger(Trig_Always);
+    wavein_samplerate(24000000);
+    wavein_start();
+}
