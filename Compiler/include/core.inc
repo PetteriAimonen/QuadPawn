@@ -1,30 +1,40 @@
-/* Core functions
- *
- * (c) Copyright 1998-2011, ITB CompuPhase
- * This file is provided as is (no warranties).
- */
-#pragma library Core
-
+/// Return number of free cells in the virtual machine heap
 native heapspace();
 
+/// Return index of a public function.
 native funcidx(const name[]);
 
+/// Variable argument list handling
 native numargs();
 native getarg(arg, index=0);
 native setarg(arg, index=0, value);
 
-native tolower(c);
-native toupper(c);
-native swapchars(c);
+/// Clear an array
+native memset(array[], value = 0, count = sizeof array);
 
-native random(max);
+/// Copy array into another
+native memcpy(dest[], const src[], count = sizeof dest);
 
-native min(value1, value2);
-native max(value1, value2);
-native clamp(value, min=cellmin, max=cellmax);
+stock min(value1, value2)
+    return (value1 <= value2) ? value1 : value2;
 
-native getproperty(id=0, const name[]=``'', value=cellmin, string[]=``'', size=sizeof string);
-native setproperty(id=0, const name[]=``'', value=cellmin, const string[]=``'');
-native deleteproperty(id=0, const name[]=``'', value=cellmin);
-native existproperty(id=0, const name[]=``'', value=cellmin);
+stock max(value1, value2)
+    return (value1 >= value2) ? value1 : value2;
 
+stock clamp(value, min=cellmin, max=cellmax)
+{
+    if (value < min)
+        return min;
+    else if (value > max)
+        return max;
+    else
+        return value;
+}
+
+stock abs(value)
+{
+    if (value < 0)
+        return -value;
+    else
+        return value;
+}

@@ -1,20 +1,16 @@
-/* Date/time functions
- *
- * (c) Copyright 2001-2011, ITB CompuPhase
- * This file is provided as is (no warranties).
- */
-#pragma library Time
+/** Functions based on internal 1ms timer tick. */
 
-native gettime(&hour=0, &minute=0, &second=0);
-native settime(hour=cellmin, minute=cellmin, second=cellmin);
-native getdate(&year=0, &month=0, &day=0);
-native setdate(year=cellmin, month=cellmin, day=cellmin);
+/// Return time passed since system boot in milliseconds.
+/// Overflows after 24 days of operation.
+native get_time();
 
-native settimestamp(seconds1970);
-native cvttimestamp(seconds1970, &year=0, &month=0, &day=0, &hour=0, &minute=0, &second=0);
+/// Implement this function to get periodic callbacks when
+/// in "event driven" mode.
+forward @timertick();
 
-native settimer(milliseconds, bool: singleshot=false);
-native tickcount(&granularity=0);
-native delay(milliseconds);
+/// Set the period for the timertick callback, in milliseconds.
+/// Set to 0 (default) to disable the timer tick.
+native set_timer(period);
 
-forward @timer();
+/// Delay without yielding events. This simply waits in a busy loop.
+native delay_ms(delay);
