@@ -1,0 +1,4 @@
+The Windows build is done using OpenWatcom compiler and CMakeSetup.
+
+It is also possible to cross-compile using mingw, but the resulting
+binary somehow messes up the parser and spits out errors.
