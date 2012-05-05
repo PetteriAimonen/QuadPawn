@@ -123,7 +123,7 @@ clear()
         
         new ADCCoupling: coupling, ADCRange: range, offset;
         
-        if (outf > 1000000 && use_reference)
+        if (outf > 2000000 && use_reference)
         {
             // Better use the same range for both, because the
             // range affects frequency response at high freq.
@@ -188,8 +188,8 @@ clear()
 @button2()
 {
     // File saving
-    draw_menubar("BMP", "CSV", "", "");
-    while (!peek_keys(BUTTON1 | BUTTON2)) {}
+    draw_menubar("BMP", "CSV", "", "Cancel");
+    while (!peek_keys(BUTTON1 | BUTTON2 | BUTTON4)) {}
     
     if (get_keys(BUTTON1))
     {
@@ -222,6 +222,8 @@ clear()
         else
             draw_status("CSV save failed!");
     }
+
+    get_keys(ANY_KEY);
 }
 
 @button3()
