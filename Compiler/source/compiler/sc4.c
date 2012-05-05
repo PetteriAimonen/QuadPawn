@@ -101,7 +101,7 @@ SC_FUNC void writeleader(symbol *root,int *lbl_nostate,int *lbl_ignorestate)
      */
     stgwrite("\tproc\n");
     if (pc_overlays>0)
-      stgwrite("\tiretn\n");
+      stgwrite("\tretn.ovl\n");
     else
       stgwrite("\tret\n");
     code_idx+=opcodes(2);
@@ -848,7 +848,7 @@ SC_FUNC void swap1(void)
 SC_FUNC void ffswitch(int label,int iswitch)
 {
   if (iswitch)
-    stgwrite("\tiswitch ");
+    stgwrite("\tswitch.ovl ");
   else
     stgwrite("\tswitch ");
   outval(label,TRUE,TRUE);      /* the label is the address of the case table */
@@ -859,7 +859,7 @@ SC_FUNC void ffcase(cell value,int label,int newtable,int icase)
 {
   if (newtable) {
     if (icase)
-      stgwrite("\ticasetbl\n");
+      stgwrite("\tcasetbl.ovl\n");
     else
       stgwrite("\tcasetbl\n");
     code_idx+=opcodes(1);
@@ -903,7 +903,7 @@ SC_FUNC void ffcall(symbol *sym,const char *label,int numargs)
   } else {
     /* normal function */
     if (pc_overlays>0)
-      stgwrite("\ticall ");
+      stgwrite("\tcall.ovl ");
     else
       stgwrite("\tcall ");
     if (pc_overlays>0) {
@@ -938,7 +938,7 @@ SC_FUNC void ffcall(symbol *sym,const char *label,int numargs)
 SC_FUNC void ffret(int remparams)
 {
   if (pc_overlays>0)
-    stgwrite("\tiretn\n");
+    stgwrite("\tretn.ovl\n");
   else if (remparams)
     stgwrite("\tretn\n");
   else
