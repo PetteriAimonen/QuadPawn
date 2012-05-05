@@ -94,8 +94,6 @@ main()
         avgA = get_voltage(Ch_A, avgA);
         avgB = get_voltage(Ch_B, avgB);
         
-        draw_text(str(_:avgA), 0, 0, .bg = black);
-        
         // Here we update the maximum and minimum values. Note that we update
         // them from the computed average. The averaging process reduces
         // noise, but may cause us to miss some short (less than 20ms)
