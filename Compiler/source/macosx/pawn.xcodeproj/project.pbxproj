@@ -1,0 +1,1064 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		D64D2F5908A50F4C00085460 /* Build All */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = D64D2F6008A50F7100085460 /* Build configuration list for PBXAggregateTarget "Build All" */;
+			buildPhases = (
+			);
+			buildSettings = {
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Untitled;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+				D64D2F5B08A50F5C00085460 /* PBXTargetDependency */,
+				D64D2F5D08A50F5C00085460 /* PBXTargetDependency */,
+				D64D2F5F08A50F5C00085460 /* PBXTargetDependency */,
+				D64D2FA708A513CD00085460 /* PBXTargetDependency */,
+				D64D2FA908A513D300085460 /* PBXTargetDependency */,
+				D6B01F1108A528E500660A5B /* PBXTargetDependency */,
+			);
+			name = "Build All";
+			productName = Untitled;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		D64D2E7E08A4703A00085460 /* sc6.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7008A4703900085460 /* sc6.c */; };
+		D64D2E7F08A4703A00085460 /* sc1.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7108A4703900085460 /* sc1.c */; };
+		D64D2E8008A4703A00085460 /* scvars.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7208A4703900085460 /* scvars.c */; };
+		D64D2E8108A4703A00085460 /* sci18n.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7308A4703900085460 /* sci18n.c */; };
+		D64D2E8208A4703A00085460 /* scstate.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7408A4703900085460 /* scstate.c */; };
+		D64D2E8308A4703A00085460 /* sc7.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7508A4703900085460 /* sc7.c */; };
+		D64D2E8408A4703A00085460 /* scmemfil.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7608A4703900085460 /* scmemfil.c */; };
+		D64D2E8508A4703A00085460 /* libpawnc.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7708A4703900085460 /* libpawnc.c */; };
+		D64D2E8608A4703A00085460 /* scexpand.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7808A4703900085460 /* scexpand.c */; };
+		D64D2E8708A4703A00085460 /* sc3.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7908A4703900085460 /* sc3.c */; };
+		D64D2E8808A4703A00085460 /* sc4.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7A08A4703900085460 /* sc4.c */; };
+		D64D2E8908A4703A00085460 /* sc2.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7B08A4703900085460 /* sc2.c */; };
+		D64D2E8A08A4703A00085460 /* sc5.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7C08A4703900085460 /* sc5.c */; };
+		D64D2E8B08A4703A00085460 /* sclist.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2E7D08A4703900085460 /* sclist.c */; };
+		D64D2EDE08A4750C00085460 /* libpawnc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D2AAC046055464E500DB518D /* libpawnc.a */; };
+		D64D2EE608A4753800085460 /* pawncc.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2EE508A4753800085460 /* pawncc.c */; };
+		D64D2F2D08A47EDF00085460 /* amxgc.h in Headers */ = {isa = PBXBuildFile; fileRef = D64D2F1D08A47EDF00085460 /* amxgc.h */; };
+		D64D2F2E08A47EDF00085460 /* amxdbg.h in Headers */ = {isa = PBXBuildFile; fileRef = D64D2F1E08A47EDF00085460 /* amxdbg.h */; };
+		D64D2F2F08A47EDF00085460 /* amxcons.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F1F08A47EDF00085460 /* amxcons.c */; };
+		D64D2F3008A47EDF00085460 /* amxfile.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2108A47EDF00085460 /* amxfile.c */; };
+		D64D2F3308A47EDF00085460 /* amxgc.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2408A47EDF00085460 /* amxgc.c */; };
+		D64D2F3408A47EDF00085460 /* amxdbg.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2608A47EDF00085460 /* amxdbg.c */; };
+		D64D2F3508A47EDF00085460 /* amxstring.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2708A47EDF00085460 /* amxstring.c */; };
+		D64D2F3608A47EDF00085460 /* amxtime.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2808A47EDF00085460 /* amxtime.c */; };
+		D64D2F3708A47EDF00085460 /* amx.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2908A47EDF00085460 /* amx.c */; };
+		D64D2F3908A47EDF00085460 /* amxcore.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F2B08A47EDF00085460 /* amxcore.c */; };
+		D64D2F3A08A47EDF00085460 /* amx.h in Headers */ = {isa = PBXBuildFile; fileRef = D64D2F2C08A47EDF00085460 /* amx.h */; };
+		D64D2F6B08A50FFC00085460 /* libamx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D64D2F1708A47EB500085460 /* libamx.a */; };
+		D64D2F7208A5103E00085460 /* pawnrun.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F7108A5103E00085460 /* pawnrun.c */; };
+		D64D2F8508A511EB00085460 /* amxargs.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F8408A511EB00085460 /* amxargs.c */; };
+		D64D2FA108A5139B00085460 /* pawndbg.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2FA008A5139B00085460 /* pawndbg.c */; };
+		D64D2FA508A513BD00085460 /* libamx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D64D2F1708A47EB500085460 /* libamx.a */; };
+		D64D2FBA08A514E800085460 /* getch.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F7408A5110C00085460 /* getch.c */; };
+		D64D2FCF08A518DA00085460 /* getch.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F7408A5110C00085460 /* getch.c */; };
+		D64D300308A51D9D00085460 /* getch.c in Sources */ = {isa = PBXBuildFile; fileRef = D64D2F7408A5110C00085460 /* getch.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildStyle section */
+		014CEA520018CE5811CA2923 /* Debug */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		014CEA530018CE5811CA2923 /* Release */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End PBXBuildStyle section */
+
+/* Begin PBXContainerItemProxy section */
+		D64D2EDC08A474FD00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D2AAC045055464E500DB518D;
+			remoteInfo = libpawnc;
+		};
+		D64D2F5A08A50F5C00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D2AAC045055464E500DB518D;
+			remoteInfo = "compiler library";
+		};
+		D64D2F5C08A50F5C00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2ED708A474E100085460;
+			remoteInfo = "compiler tool";
+		};
+		D64D2F5E08A50F5C00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2F1608A47EB500085460;
+			remoteInfo = "amx library";
+		};
+		D64D2F6908A50FC500085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2F1608A47EB500085460;
+			remoteInfo = "amx library";
+		};
+		D64D2FA308A513AE00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2F1608A47EB500085460;
+			remoteInfo = "amx library";
+		};
+		D64D2FA608A513CD00085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2F6608A50FB000085460;
+			remoteInfo = "runtime tool";
+		};
+		D64D2FA808A513D300085460 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2F9608A5134500085460;
+			remoteInfo = "debug tool";
+		};
+		D6B01F1008A528E500660A5B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D64D2FCC08A518B600085460;
+			remoteInfo = "getch test tool";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		D2AAC046055464E500DB518D /* libpawnc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libpawnc.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		D64D2E7008A4703900085460 /* sc6.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc6.c; path = ../compiler/sc6.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7108A4703900085460 /* sc1.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc1.c; path = ../compiler/sc1.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7208A4703900085460 /* scvars.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = scvars.c; path = ../compiler/scvars.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7308A4703900085460 /* sci18n.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sci18n.c; path = ../compiler/sci18n.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7408A4703900085460 /* scstate.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = scstate.c; path = ../compiler/scstate.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7508A4703900085460 /* sc7.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc7.c; path = ../compiler/sc7.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7608A4703900085460 /* scmemfil.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = scmemfil.c; path = ../compiler/scmemfil.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7708A4703900085460 /* libpawnc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = libpawnc.c; path = ../compiler/libpawnc.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7808A4703900085460 /* scexpand.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = scexpand.c; path = ../compiler/scexpand.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7908A4703900085460 /* sc3.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc3.c; path = ../compiler/sc3.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7A08A4703900085460 /* sc4.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc4.c; path = ../compiler/sc4.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7B08A4703900085460 /* sc2.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc2.c; path = ../compiler/sc2.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7C08A4703900085460 /* sc5.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sc5.c; path = ../compiler/sc5.c; sourceTree = SOURCE_ROOT; };
+		D64D2E7D08A4703900085460 /* sclist.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sclist.c; path = ../compiler/sclist.c; sourceTree = SOURCE_ROOT; };
+		D64D2ED808A474E100085460 /* pawncc */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pawncc; sourceTree = BUILT_PRODUCTS_DIR; };
+		D64D2EE508A4753800085460 /* pawncc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = pawncc.c; path = ../compiler/pawncc.c; sourceTree = SOURCE_ROOT; };
+		D64D2F1708A47EB500085460 /* libamx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libamx.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		D64D2F1D08A47EDF00085460 /* amxgc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = amxgc.h; path = ../amx/amxgc.h; sourceTree = SOURCE_ROOT; };
+		D64D2F1E08A47EDF00085460 /* amxdbg.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = amxdbg.h; path = ../amx/amxdbg.h; sourceTree = SOURCE_ROOT; };
+		D64D2F1F08A47EDF00085460 /* amxcons.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxcons.c; path = ../amx/amxcons.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2008A47EDF00085460 /* amxstring.rc */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = amxstring.rc; path = ../amx/amxstring.rc; sourceTree = SOURCE_ROOT; };
+		D64D2F2108A47EDF00085460 /* amxfile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxfile.c; path = ../amx/amxfile.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2408A47EDF00085460 /* amxgc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxgc.c; path = ../amx/amxgc.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2508A47EDF00085460 /* amxtime.rc */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = amxtime.rc; path = ../amx/amxtime.rc; sourceTree = SOURCE_ROOT; };
+		D64D2F2608A47EDF00085460 /* amxdbg.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxdbg.c; path = ../amx/amxdbg.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2708A47EDF00085460 /* amxstring.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxstring.c; path = ../amx/amxstring.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2808A47EDF00085460 /* amxtime.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxtime.c; path = ../amx/amxtime.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2908A47EDF00085460 /* amx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amx.c; path = ../amx/amx.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2B08A47EDF00085460 /* amxcore.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxcore.c; path = ../amx/amxcore.c; sourceTree = SOURCE_ROOT; };
+		D64D2F2C08A47EDF00085460 /* amx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = amx.h; path = ../amx/amx.h; sourceTree = SOURCE_ROOT; };
+		D64D2F6708A50FB000085460 /* pawnrun */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pawnrun; sourceTree = BUILT_PRODUCTS_DIR; };
+		D64D2F7108A5103E00085460 /* pawnrun.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = pawnrun.c; path = ../amx/pawnrun.c; sourceTree = SOURCE_ROOT; };
+		D64D2F7308A5110B00085460 /* getch.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = getch.h; path = ../linux/getch.h; sourceTree = SOURCE_ROOT; };
+		D64D2F7408A5110C00085460 /* getch.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = getch.c; path = ../linux/getch.c; sourceTree = SOURCE_ROOT; };
+		D64D2F8408A511EB00085460 /* amxargs.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = amxargs.c; path = ../amx/amxargs.c; sourceTree = SOURCE_ROOT; };
+		D64D2F9708A5134500085460 /* pawndbg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pawndbg; sourceTree = BUILT_PRODUCTS_DIR; };
+		D64D2FA008A5139B00085460 /* pawndbg.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = pawndbg.c; path = ../amx/pawndbg.c; sourceTree = SOURCE_ROOT; };
+		D64D2FCD08A518B600085460 /* getchtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = getchtest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D687371B08A56F3B00274AA8 /* pawnmacosx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pawnmacosx.h; sourceTree = "<group>"; };
+		D6ED906F08A7E878005C4A54 /* readme.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = readme.rtf; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D289987405E68DCB004EDB86 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2ED608A474E100085460 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2EDE08A4750C00085460 /* libpawnc.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F1508A47EB500085460 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F6508A50FB000085460 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2F6B08A50FFC00085460 /* libamx.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F9508A5134500085460 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2FA508A513BD00085460 /* libamx.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2FCB08A518B600085460 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* pawn */ = {
+			isa = PBXGroup;
+			children = (
+				C6A0FF2B0290797F04C91782 /* Documentation */,
+				08FB7795FE84155DC02AAC07 /* Source */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+			);
+			name = pawn;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				D687371B08A56F3B00274AA8 /* pawnmacosx.h */,
+				D64D2E6E08A46F6E00085460 /* compiler library */,
+				D64D2EC508A4744900085460 /* compiler tool */,
+				D64D2F0E08A47D4E00085460 /* amx library */,
+				D64D2FB908A514C900085460 /* tool common */,
+				D64D2F6C08A5100B00085460 /* runtime tool */,
+				D64D2F9E08A5136F00085460 /* debug tool */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D2AAC046055464E500DB518D /* libpawnc.a */,
+				D64D2ED808A474E100085460 /* pawncc */,
+				D64D2F1708A47EB500085460 /* libamx.a */,
+				D64D2F6708A50FB000085460 /* pawnrun */,
+				D64D2F9708A5134500085460 /* pawndbg */,
+				D64D2FCD08A518B600085460 /* getchtest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C6A0FF2B0290797F04C91782 /* Documentation */ = {
+			isa = PBXGroup;
+			children = (
+				D6ED906F08A7E878005C4A54 /* readme.rtf */,
+			);
+			name = Documentation;
+			sourceTree = "<group>";
+		};
+		D64D2E6E08A46F6E00085460 /* compiler library */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2E7708A4703900085460 /* libpawnc.c */,
+				D64D2E7108A4703900085460 /* sc1.c */,
+				D64D2E7B08A4703900085460 /* sc2.c */,
+				D64D2E7908A4703900085460 /* sc3.c */,
+				D64D2E7A08A4703900085460 /* sc4.c */,
+				D64D2E7C08A4703900085460 /* sc5.c */,
+				D64D2E7008A4703900085460 /* sc6.c */,
+				D64D2E7508A4703900085460 /* sc7.c */,
+				D64D2E7808A4703900085460 /* scexpand.c */,
+				D64D2E7308A4703900085460 /* sci18n.c */,
+				D64D2E7D08A4703900085460 /* sclist.c */,
+				D64D2E7608A4703900085460 /* scmemfil.c */,
+				D64D2E7408A4703900085460 /* scstate.c */,
+				D64D2E7208A4703900085460 /* scvars.c */,
+			);
+			name = "compiler library";
+			sourceTree = "<group>";
+		};
+		D64D2EC508A4744900085460 /* compiler tool */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2EE508A4753800085460 /* pawncc.c */,
+			);
+			name = "compiler tool";
+			sourceTree = "<group>";
+		};
+		D64D2F0E08A47D4E00085460 /* amx library */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2F2908A47EDF00085460 /* amx.c */,
+				D64D2F2C08A47EDF00085460 /* amx.h */,
+				D64D2F8408A511EB00085460 /* amxargs.c */,
+				D64D2F1F08A47EDF00085460 /* amxcons.c */,
+				D64D2F2B08A47EDF00085460 /* amxcore.c */,
+				D64D2F2608A47EDF00085460 /* amxdbg.c */,
+				D64D2F1E08A47EDF00085460 /* amxdbg.h */,
+				D64D2F2108A47EDF00085460 /* amxfile.c */,
+				D64D2F2408A47EDF00085460 /* amxgc.c */,
+				D64D2F1D08A47EDF00085460 /* amxgc.h */,
+				D64D2F2708A47EDF00085460 /* amxstring.c */,
+				D64D2F2008A47EDF00085460 /* amxstring.rc */,
+				D64D2F2808A47EDF00085460 /* amxtime.c */,
+				D64D2F2508A47EDF00085460 /* amxtime.rc */,
+			);
+			name = "amx library";
+			sourceTree = "<group>";
+		};
+		D64D2F6C08A5100B00085460 /* runtime tool */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2F7108A5103E00085460 /* pawnrun.c */,
+			);
+			name = "runtime tool";
+			sourceTree = "<group>";
+		};
+		D64D2F9E08A5136F00085460 /* debug tool */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2FA008A5139B00085460 /* pawndbg.c */,
+			);
+			name = "debug tool";
+			sourceTree = "<group>";
+		};
+		D64D2FB908A514C900085460 /* tool common */ = {
+			isa = PBXGroup;
+			children = (
+				D64D2F7308A5110B00085460 /* getch.h */,
+				D64D2F7408A5110C00085460 /* getch.c */,
+			);
+			name = "tool common";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D2AAC043055464E500DB518D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F1308A47EB500085460 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2F2D08A47EDF00085460 /* amxgc.h in Headers */,
+				D64D2F2E08A47EDF00085460 /* amxdbg.h in Headers */,
+				D64D2F3A08A47EDF00085460 /* amx.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D2AAC045055464E500DB518D /* compiler library */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2E6308A46F4800085460 /* Build configuration list for PBXNativeTarget "compiler library" */;
+			buildPhases = (
+				D2AAC043055464E500DB518D /* Headers */,
+				D2AAC044055464E500DB518D /* Sources */,
+				D289987405E68DCB004EDB86 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = STATIC;
+				PREBINDING = NO;
+				PRODUCT_NAME = pawn;
+			};
+			dependencies = (
+			);
+			name = "compiler library";
+			productName = pawn;
+			productReference = D2AAC046055464E500DB518D /* libpawnc.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		D64D2ED708A474E100085460 /* compiler tool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2EE108A4752000085460 /* Build configuration list for PBXNativeTarget "compiler tool" */;
+			buildPhases = (
+				D64D2ED508A474E100085460 /* Sources */,
+				D64D2ED608A474E100085460 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/bin";
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = pawncc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+				D64D2EDD08A474FD00085460 /* PBXTargetDependency */,
+			);
+			name = "compiler tool";
+			productName = pawncc;
+			productReference = D64D2ED808A474E100085460 /* pawncc */;
+			productType = "com.apple.product-type.tool";
+		};
+		D64D2F1608A47EB500085460 /* amx library */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2F1908A47ED000085460 /* Build configuration list for PBXNativeTarget "amx library" */;
+			buildPhases = (
+				D64D2F1308A47EB500085460 /* Headers */,
+				D64D2F1408A47EB500085460 /* Sources */,
+				D64D2F1508A47EB500085460 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/lib";
+				LIBRARY_STYLE = STATIC;
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = amx;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+			);
+			name = "amx library";
+			productName = amx;
+			productReference = D64D2F1708A47EB500085460 /* libamx.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		D64D2F6608A50FB000085460 /* runtime tool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2F6D08A5100B00085460 /* Build configuration list for PBXNativeTarget "runtime tool" */;
+			buildPhases = (
+				D64D2F6408A50FB000085460 /* Sources */,
+				D64D2F6508A50FB000085460 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/bin";
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = pawnrun;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+				D64D2F6A08A50FC500085460 /* PBXTargetDependency */,
+			);
+			name = "runtime tool";
+			productName = pawnrun;
+			productReference = D64D2F6708A50FB000085460 /* pawnrun */;
+			productType = "com.apple.product-type.tool";
+		};
+		D64D2F9608A5134500085460 /* debug tool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2F9A08A5136200085460 /* Build configuration list for PBXNativeTarget "debug tool" */;
+			buildPhases = (
+				D64D2F9408A5134500085460 /* Sources */,
+				D64D2F9508A5134500085460 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/bin";
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = pawndbg;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+				D64D2FA408A513AE00085460 /* PBXTargetDependency */,
+			);
+			name = "debug tool";
+			productName = pawndbg;
+			productReference = D64D2F9708A5134500085460 /* pawndbg */;
+			productType = "com.apple.product-type.tool";
+		};
+		D64D2FCC08A518B600085460 /* getch test tool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D64D2FD008A5190F00085460 /* Build configuration list for PBXNativeTarget "getch test tool" */;
+			buildPhases = (
+				D64D2FCA08A518B600085460 /* Sources */,
+				D64D2FCB08A518B600085460 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/bin";
+				OPTIMIZATION_CFLAGS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = getchtest;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+			);
+			name = "getch test tool";
+			productName = getchtest;
+			productReference = D64D2FCD08A518B600085460 /* getchtest */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = D64D2E6708A46F4800085460 /* Build configuration list for PBXProject "pawn" */;
+			buildSettings = {
+			};
+			buildStyles = (
+				014CEA520018CE5811CA2923 /* Debug */,
+				014CEA530018CE5811CA2923 /* Release */,
+			);
+			hasScannedForEncodings = 1;
+			mainGroup = 08FB7794FE84155DC02AAC07 /* pawn */;
+			projectDirPath = "";
+			targets = (
+				D64D2F5908A50F4C00085460 /* Build All */,
+				D2AAC045055464E500DB518D /* compiler library */,
+				D64D2ED708A474E100085460 /* compiler tool */,
+				D64D2F1608A47EB500085460 /* amx library */,
+				D64D2F6608A50FB000085460 /* runtime tool */,
+				D64D2F9608A5134500085460 /* debug tool */,
+				D64D2FCC08A518B600085460 /* getch test tool */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D2AAC044055464E500DB518D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2E7E08A4703A00085460 /* sc6.c in Sources */,
+				D64D2E7F08A4703A00085460 /* sc1.c in Sources */,
+				D64D2E8008A4703A00085460 /* scvars.c in Sources */,
+				D64D2E8108A4703A00085460 /* sci18n.c in Sources */,
+				D64D2E8208A4703A00085460 /* scstate.c in Sources */,
+				D64D2E8308A4703A00085460 /* sc7.c in Sources */,
+				D64D2E8408A4703A00085460 /* scmemfil.c in Sources */,
+				D64D2E8508A4703A00085460 /* libpawnc.c in Sources */,
+				D64D2E8608A4703A00085460 /* scexpand.c in Sources */,
+				D64D2E8708A4703A00085460 /* sc3.c in Sources */,
+				D64D2E8808A4703A00085460 /* sc4.c in Sources */,
+				D64D2E8908A4703A00085460 /* sc2.c in Sources */,
+				D64D2E8A08A4703A00085460 /* sc5.c in Sources */,
+				D64D2E8B08A4703A00085460 /* sclist.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2ED508A474E100085460 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2EE608A4753800085460 /* pawncc.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F1408A47EB500085460 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2F2F08A47EDF00085460 /* amxcons.c in Sources */,
+				D64D2F3008A47EDF00085460 /* amxfile.c in Sources */,
+				D64D2F3308A47EDF00085460 /* amxgc.c in Sources */,
+				D64D2F3408A47EDF00085460 /* amxdbg.c in Sources */,
+				D64D2F3508A47EDF00085460 /* amxstring.c in Sources */,
+				D64D2F3608A47EDF00085460 /* amxtime.c in Sources */,
+				D64D2F3708A47EDF00085460 /* amx.c in Sources */,
+				D64D2F3908A47EDF00085460 /* amxcore.c in Sources */,
+				D64D2F8508A511EB00085460 /* amxargs.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F6408A50FB000085460 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2F7208A5103E00085460 /* pawnrun.c in Sources */,
+				D64D300308A51D9D00085460 /* getch.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2F9408A5134500085460 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2FA108A5139B00085460 /* pawndbg.c in Sources */,
+				D64D2FBA08A514E800085460 /* getch.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D64D2FCA08A518B600085460 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64D2FCF08A518DA00085460 /* getch.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D64D2EDD08A474FD00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D2AAC045055464E500DB518D /* compiler library */;
+			targetProxy = D64D2EDC08A474FD00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2F5B08A50F5C00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D2AAC045055464E500DB518D /* compiler library */;
+			targetProxy = D64D2F5A08A50F5C00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2F5D08A50F5C00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2ED708A474E100085460 /* compiler tool */;
+			targetProxy = D64D2F5C08A50F5C00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2F5F08A50F5C00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2F1608A47EB500085460 /* amx library */;
+			targetProxy = D64D2F5E08A50F5C00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2F6A08A50FC500085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2F1608A47EB500085460 /* amx library */;
+			targetProxy = D64D2F6908A50FC500085460 /* PBXContainerItemProxy */;
+		};
+		D64D2FA408A513AE00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2F1608A47EB500085460 /* amx library */;
+			targetProxy = D64D2FA308A513AE00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2FA708A513CD00085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2F6608A50FB000085460 /* runtime tool */;
+			targetProxy = D64D2FA608A513CD00085460 /* PBXContainerItemProxy */;
+		};
+		D64D2FA908A513D300085460 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2F9608A5134500085460 /* debug tool */;
+			targetProxy = D64D2FA808A513D300085460 /* PBXContainerItemProxy */;
+		};
+		D6B01F1108A528E500660A5B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D64D2FCC08A518B600085460 /* getch test tool */;
+			targetProxy = D6B01F1008A528E500660A5B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D64D2E6408A46F4800085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = STATIC;
+				OTHER_CFLAGS = "-DNO_MAIN";
+				PRODUCT_NAME = pawnc;
+			};
+			name = Debug;
+		};
+		D64D2E6508A46F4800085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = STATIC;
+				OTHER_CFLAGS = "-DNO_MAIN";
+				PRODUCT_NAME = pawnc;
+			};
+			name = Release;
+		};
+		D64D2E6808A46F4800085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = pawnmacosx.h;
+				PREBINDING = NO;
+			};
+			name = Debug;
+		};
+		D64D2E6908A46F4800085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = pawnmacosx.h;
+				PREBINDING = NO;
+			};
+			name = Release;
+		};
+		D64D2EE208A4752000085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawncc;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2EE308A4752000085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawncc;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+		D64D2F1A08A47ED000085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/lib";
+				LIBRARY_STYLE = STATIC;
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = amx;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2F1B08A47ED000085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/lib";
+				LIBRARY_STYLE = STATIC;
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = amx;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+		D64D2F6108A50F7100085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Untitled;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2F6208A50F7100085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Untitled;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+		D64D2F6E08A5100B00085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawnrun;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2F6F08A5100B00085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawnrun;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+		D64D2F9B08A5136200085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_CFLAGS = "-DNO_REMOTE";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawndbg;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2F9C08A5136200085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_CFLAGS = "-DNO_REMOTE";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = pawndbg;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+		D64D2FD108A5190F00085460 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_CFLAGS = "-DTEST_GETCH";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = getchtest;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Debug;
+		};
+		D64D2FD208A5190F00085460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_CFLAGS = "-DTEST_GETCH";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = getchtest;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D64D2E6308A46F4800085460 /* Build configuration list for PBXNativeTarget "compiler library" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2E6408A46F4800085460 /* Debug */,
+				D64D2E6508A46F4800085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2E6708A46F4800085460 /* Build configuration list for PBXProject "pawn" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2E6808A46F4800085460 /* Debug */,
+				D64D2E6908A46F4800085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2EE108A4752000085460 /* Build configuration list for PBXNativeTarget "compiler tool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2EE208A4752000085460 /* Debug */,
+				D64D2EE308A4752000085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2F1908A47ED000085460 /* Build configuration list for PBXNativeTarget "amx library" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2F1A08A47ED000085460 /* Debug */,
+				D64D2F1B08A47ED000085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2F6008A50F7100085460 /* Build configuration list for PBXAggregateTarget "Build All" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2F6108A50F7100085460 /* Debug */,
+				D64D2F6208A50F7100085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2F6D08A5100B00085460 /* Build configuration list for PBXNativeTarget "runtime tool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2F6E08A5100B00085460 /* Debug */,
+				D64D2F6F08A5100B00085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2F9A08A5136200085460 /* Build configuration list for PBXNativeTarget "debug tool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2F9B08A5136200085460 /* Debug */,
+				D64D2F9C08A5136200085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D64D2FD008A5190F00085460 /* Build configuration list for PBXNativeTarget "getch test tool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D64D2FD108A5190F00085460 /* Debug */,
+				D64D2FD208A5190F00085460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}
