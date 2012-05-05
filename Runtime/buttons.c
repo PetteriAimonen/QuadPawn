@@ -20,6 +20,8 @@ static volatile uint32_t KEYS_DOWN = 0;
 // Timestamp when was the last time KEYS_DOWN changed
 static volatile uint32_t KEYS_LAST_CHANGED = 0;
 
+static volatile int BEEP_TIME = 0;
+
 // Debounce time for keys, in milliseconds
 #define DEBOUNCE 10
 
@@ -53,6 +55,13 @@ void __irq__ TIM3_IRQHandler(void)
     {
         if ((time_down - REPEAT_DELAY) % REPEAT_PERIOD == 0)
             KEYS_PRESSED |= (keys & REPEAT_KEYS);
+    }
+    
+    if (BEEP_TIME >= 0)
+    {
+        BEEP_TIME--;
+        if (BEEP_TIME <= 0)
+            __Set(BEEP_VOLUME, 0);
     }
     
     TimerTick();
@@ -96,6 +105,12 @@ void delay_ms(uint32_t milliseconds)
 {
     uint32_t start = TICKCOUNT;
     while (TICKCOUNT - start < milliseconds);
+}
+
+void beep(int milliseconds, int volume)
+{
+    __Set(BEEP_VOLUME, volume);
+    BEEP_TIME = milliseconds;
 }
 
 #include <fix16.h>

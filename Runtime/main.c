@@ -48,9 +48,12 @@ int amx_timer_doevents(AMX *amx);
 
 register void *stack_pointer asm("sp");
 
+#define AMX_ERR_ABORT 100
+#define AMX_ERR_FILE_CHANGED 101
+
 static int debughook(AMX *amx)
 {
-    return AMX_ERR_EXIT;
+    return AMX_ERR_ABORT;
 }
 
 volatile bool ABORT = false;
@@ -58,7 +61,7 @@ volatile bool ABORT = false;
 void TimerTick()
 {
     uint32_t ms;
-    if (held_keys(BUTTON4, &ms))
+    if (held_keys(ANY_KEY, &ms) == BUTTON4)
     {
         if (ms > 3000)
         {
@@ -70,9 +73,21 @@ void TimerTick()
             ABORT = true;
         }
     }
+    else if (held_keys(ANY_KEY, &ms) == (BUTTON3 | BUTTON4))
+    {
+        if (ms > 3000)
+        {
+            // It's quite ugly to do such a long task in an
+            // interrupt handler. Furthermore, it may access
+            // the filesystem at the wrong time.
+            write_bitmap(select_filename("SSHOT%03d.BMP"), bmp_default_palette);
+            
+            __Set(BEEP_VOLUME, 20);
+            while ((~__Get(KEY_STATUS)) & BUTTON4);
+            __Set(BEEP_VOLUME, 0);
+        }
+    }
 }
-
-#define AMX_ERR_FILE_CHANGED 100
 
 int overlay_callback(AMX *amx, int index)
 {

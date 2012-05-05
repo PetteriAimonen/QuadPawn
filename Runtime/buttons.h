@@ -28,6 +28,9 @@ uint32_t get_time();
 // Delay a specified number of milliseconds in a while loop
 void delay_ms(uint32_t milliseconds);
 
+// Beep for a given time
+void beep(int milliseconds, int volume);
+
 // Get scroller increment based on held_keys time. This achieves incremental
 // acceleration.
 int scroller_speed();
