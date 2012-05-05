@@ -10,6 +10,7 @@
 #include "ds203_io.h"
 #include <string.h>
 #include <stdlib.h>
+#include "msgbox.h"
 #include "metadata.h"
 
 extern FATFS fatfs;
@@ -91,7 +92,7 @@ static void render_screen(int page, int *maxindex)
     FILINFO file;
     
     __Clear_Screen(0);
-    draw_menubar("Run", "Refresh", "", "");
+    draw_menubar("Run", "Refresh", "", "About");
     
     f_opendir(&dir, "/");
     if (!seek_dir(page, &dir, &file))
@@ -204,6 +205,19 @@ void select_file(char result[13])
         {
             // Refresh
             f_flush(&fatfs);
+            rerender = true;
+        }
+        
+        if (get_keys(BUTTON4))
+        {
+            show_msgbox("About PAWN_APP",
+                        "Pawn scripting language for DSO Quad\n"
+                        "(C) 2012 Petteri Aimonen <jpa@kapsi.fi>\n"
+                        "\n"
+                        "Built " __DATE__ " at " __TIME__ "\n"
+                        "Git id " COMMITID "\n"
+                        "GCC version " __VERSION__
+            );
             rerender = true;
         }
         

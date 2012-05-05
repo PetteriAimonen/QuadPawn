@@ -14,6 +14,8 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	amx_time.o \
 	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o
 
+COMMITID := $(shell git describe --always || echo unknown)
+
 # Linker script (choose which application position to use)
 LFLAGS  = -L linker_scripts -T app4.lds
 
@@ -22,7 +24,7 @@ LIBS = -lm -lgcc baselibc/libc.a
 
 # Include directories for .h files
 CFLAGS = -I baselibc/include -I stm32_headers -I DS203 \
-	-I amx -I fatfs -I libfixmath
+	-I amx -I fatfs -I libfixmath -DCOMMITID=\"$(COMMITID)\"
 
 # DS203 generic stuff
 OBJS += startup.o BIOS.o Interrupt.o
