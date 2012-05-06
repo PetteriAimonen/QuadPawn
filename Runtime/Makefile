@@ -34,6 +34,10 @@ CC      = arm-none-eabi-gcc
 CP      = arm-none-eabi-objcopy
 OD      = arm-none-eabi-objdump
 
+ifdef windir
+RM = del
+endif
+
 # Processor type
 CFLAGS += -mcpu=cortex-m3 -mthumb -mno-thumb-interwork
 
@@ -53,7 +57,7 @@ _OBJS = $(addprefix build/,$(OBJS))
 all: $(NAME).HEX
 
 clean:
-	rm -f $(NAME).HEX build/*
+	$(RM) $(NAME).HEX build/*
 
 $(NAME).HEX: build/$(NAME).elf
 	$(CP) -O ihex $< $@
