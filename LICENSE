@@ -1,0 +1,39 @@
+-----------------------------------------------
+The following files are under the BSD license:
+
+1. Files under the Programs folder, unless indicated otherwise by
+   comments in the beginning of the file.
+2. Files under Compiler/include
+3. Files directly under Runtime folder, but excluding the subdirectories
+   which contain third-party modules.
+
+Copyright (c) 2011 Petteri Aimonen <jpa at dso.mail.kapsi.fi>
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met: 
+
+1. Redistributions of source code must retain the above copyright 
+   notice, this list of conditions and the following disclaimer. 
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution. 
+
+-----------------------------------------------------
+The following third-party components have their own
+licenses. Any changes to these third-party modules are
+under the same license as the module.
+
+1. Pawn interpreter and compiler (Runtime/amx, Compiler/source)
+   Apache license with exception clause allowing unrestricted
+   distribution of binaries under any license.
+   See http://www.compuphase.com/pawn/pawn.htm for details.
+
+2. libfixmath library (Runtime/libfixmath), under MIT license.
+
+3. Baselibc library (Runtime/baselibc), under GPL license.
+
+4. Fatfs library (Runtime/fatfs), no restriction on use.
+
+5. STM32 header files
+
+6. DSO Quad BIOS.h
