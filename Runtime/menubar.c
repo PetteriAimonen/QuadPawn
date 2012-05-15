@@ -42,6 +42,7 @@ static const uint32_t battery_icon[10] = {
 
 static const uint32_t fillpat1 = 0b101010101010101010101000;
 static const uint32_t fillpat2 = 0b010101010101010101011000;
+static const uint32_t fillmask = 0b111111111111111111111111;
 
 static void draw_batteryicon()
 {
@@ -56,8 +57,8 @@ static void draw_batteryicon()
     // Fill in the charge level
     int shift = 20 - 20 * level / 100;
     if (shift < 0) shift = 0;
-    uint32_t p1 = fillpat1 << shift;
-    uint32_t p2 = fillpat2 << shift;
+    uint32_t p1 = (fillpat1 << shift) & fillmask;
+    uint32_t p2 = (fillpat2 << shift) & fillmask;
     
     for (int i = 1; i < 9; i += 2)
     {
