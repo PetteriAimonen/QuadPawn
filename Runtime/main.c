@@ -234,6 +234,8 @@ const char *my_aux_StrError(int status)
 {
     if (status == AMX_ERR_FILE_CHANGED)
         return "AMX file changed while running";
+    else if (status == AMX_ERR_ABORT)
+        return "Program aborted by user";
     else
         return aux_StrError(status);
 }
@@ -427,6 +429,9 @@ int main(void)
             
             amxcleanup_wavein(&amx);
             amxcleanup_file(&amx);
+            
+            if (status == AMX_ERR_EXIT && ret == 0)
+                status = 0; // Ignore exit(0), but inform about e.g. exit(1)
             
             if (status != 0)
             {
