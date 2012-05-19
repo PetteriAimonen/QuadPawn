@@ -181,7 +181,8 @@ stock hex(value)
 stock strf(Fixed: value, decimals = 4)
 {
     new result{12};
-    
+    assert decimals <= 4;    
+
     if (decimals == 0)
     {
         valstr(result, fround(value));
