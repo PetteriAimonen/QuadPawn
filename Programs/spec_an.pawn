@@ -1,0 +1,302 @@
+
+/*
+specAn V1.2
+05/23/2012
+Added call to calibration in main
+Added control of noise floor
+Added display of scales at bottom of plots
+
+specAn V1.1
+05/22/2012
+This is a simple spectrum analyzer application , implemented in PAWN for the
+DSO Quad portable oscilloscope.
+
+It was based on material from a number of example PAWN programs and PAWN interpreter
+
+Petteri Aimonen's example programs
+http://essentialscrap.com/dsoquad/pawn.html
+
+This program was put together largely from these three examples from Petteri's website:
+spectrum.p
+voltmetr.p
+freqresp.p
+
+This code is offered with no warranty, either expressed or implied.
+You may use it, copy it or give it away freely.
+
+If you find something wrong with this program please let me know and if I still can
+remember how to fix and it is not during the semester when I am teaching
+I will give it a try.
+
+David Schwartz
+CSUN
+www.csun.edu/~dms
+dms@csun.edu
+
+Notes:
+The Plots that are generated are scaled sp that the peack value
+above dc is set to 0 dB and the noise floor is set to -40 dB.
+
+The PSD is generated using a simple periodogram approach of averaging
+the |fft|^2 values from a sequence of captured input buffers
+
+One unfortunate feature of the DS0 Quad is that if you save a file from an
+applicaiton you have to turn it off and on to be able to see the file on the
+USB port.
+
+As Petteri has pointed out, it appears that if the DSO Quad
+drive gets fragmented it will no longer work unless you re-format it and then
+reload any PAWN .amx files you want to use.
+*/
+#include <draw>
+#include <fixed>
+#include <fourier>
+#include <menu>
+#include <wavein>
+#include <console>
+#include <config>
+#include <calibration>
+#include <time>
+
+native gettime(&hour=0, &minute=0, &second=0);
+native settime(hour=cellmin, minute=cellmin, second=cellmin);
+native getdate(&year=0, &month=0, &day=0);
+native setdate(year=cellmin, month=cellmin, day=cellmin);
+
+#define buffSize  1024
+#define psdSize   512
+
+new inbuf{buffSize};
+new Fixed: real_fft[buffSize];
+new Fixed: imag_fft[buffSize];
+new Fixed: psdMag[psdSize];
+new loopCount;
+new Fixed: psdMax;
+new psdMaxIndx;
+
+new maxfreq_idx, sampleRate;
+//These unusal screen wandwidths are driven by to 400 horizontal point limit of
+//the DSO Quad screen
+new maxfreq_labels[]{} = ["1.4 kHz", "14 kHz", "140 kHz", "1.4 MHz", "14.0 MHz"];
+new sampleRates[] =  [3600, 36000, 360000, 3600000, 36000000];
+
+new segments_idx;
+new numSegments;
+new segments_labels[]{} = ["1", "10", "100", "500"];
+new segments_values[] = [1, 10, 100, 500];
+
+new noiseFloor_idx;
+new noiseFloor;
+new noiseFloor_labels[]{} = ["-20 dB", "-30 dB", "-40 dB", "-50 dB"];
+new noiseFloor_values[] = [20, 30, 40, 50];
+
+configure(bool: load_only = false)
+{
+    start_config("specAn.ini", load_only);
+    while (do_config())
+    {
+        config_multichoice("maxfreq", "Maximum screen frequency", maxfreq_idx, maxfreq_labels, 1);
+		config_multichoice("noise floor", "Noise Floor", noiseFloor_idx, noiseFloor_labels, 1 );
+        config_multichoice("segments", "Number of segments", segments_idx, segments_labels, 1 );
+
+    }
+    sampleRate = sampleRates[maxfreq_idx];
+	numSegments = segments_values[segments_idx];
+	noiseFloor = noiseFloor_values[noiseFloor_idx];
+}
+
+@button1()
+{
+	//configure input channel
+    config_chA(ADC_DC, ADC_50mV);
+	wavein_settrigger(Trig_Always);
+	wavein_samplerate(sampleRate);
+	wavein_start();
+
+	draw_menubar("Working", "  Please", "Wait", "");
+
+	//zero out the psdMag array
+	for (new k = 0; k < psdSize; k++)
+	  psdMag[k] = 0;
+
+	//compute fft numSegments times
+	//and combine |fft|^2 results to give a periodogram estimate of PSD
+	for (loopCount = 1; loopCount<=numSegments; loopCount++)
+	{
+		//get inpupt data and compute its fft
+    	wavein_read(inbuf);
+    	fft(inbuf, real_fft, imag_fft, buffSize);
+
+		//This line commented out for now.
+		//Just leave DC alone but ignore it for scaling of plot
+		//Subtract the DC offset (check this)
+    	//real_fft[0] -= fixed(128);
+
+	 	//init max value information
+		psdMax = -1000000;
+		psdMaxIndx = 0;
+
+		//average the PSD estimate
+		//for PSD only need to use 1/2 of buffer size
+		for (new k = 0; k < psdSize; k++)
+		{
+			//save old value to use in recursion
+			new Fixed: fftOldVal = psdMag[k];
+			//compute the mag squared of the fft
+			psdMag[k] = real_fft[k]*real_fft[k] + imag_fft[k]*imag_fft[k];
+			//do recursize combine of measurements
+			psdMag[k] = (psdMag[k] + (loopCount-1)*fftOldVal)/loopCount;
+
+			//find peak value well above DC
+			if((k>=2) && (psdMag[k] >psdMax))
+			{
+					psdMax = psdMag[k];
+					psdMaxIndx = k;
+			}
+		}
+
+		//normalize everything to the peak value above DC to scale for plot
+		for (new k = 0; k < psdSize; k++)
+			psdMag[k] =  psdMag[k]/psdMax;
+
+		//plot limited by 400 point screen width
+		//so plot only first 400 points on screen of PSD estimate
+		for (new k = 0; k < 400; k++)
+		{
+			//set noise floor scasle and plot
+			new Fixed: fftPlot = FIX(0.00001);
+			fftPlot = 1/100000;
+			fftPlot = fftPlot + psdMag[k];
+			//scale values to force 0 dB point to 180 pixels level on screen
+			new pos = (fround(10 * log10(fftPlot))+noiseFloor)*180/noiseFloor;
+			//clip all values to {0,180] so that large dc values do not damage plott
+			new Color: column[180] = [black];
+        	pos = clamp(pos, 0, 180);
+        	memset(_:column, _:green, pos);
+        	putcolumn(k, 20, column);
+    	}
+	  //draw_status(strjoin("Saving ", "put stuff here"));
+	    new psdMaxFreq;
+
+		new freqUnits[]{}=[" Hz", " kHz"];
+		new freqUnits_idx;
+
+		if (sampleRate < 36000)
+		{
+			freqUnits_idx = 0;
+			psdMaxFreq = sampleRate;
+		}
+		else
+		{
+			freqUnits_idx = 1;
+			psdMaxFreq = sampleRate/1000
+		}
+
+		psdMaxFreq = (psdMaxFreq*psdMaxIndx)/1024;
+		draw_status(strjoin("MaxPSD:", str(psdMaxFreq),freqUnits[freqUnits_idx],
+		"  Scales:[0to", maxfreq_labels[maxfreq_idx],"]", " [-",str(noiseFloor),"to0 dB]" ));
+
+
+
+		/*
+		//leave this inactive block here as a reference for putting
+		//out put on screen at any location
+		new buf{14};
+		buf = str(fround(psdMax));
+		strpad(buf, 12);
+		draw_text(buf, 200, 120, red, black);
+		*/
+    }
+}
+
+@button2()
+{
+    // File saving
+    draw_menubar("BMP", "CSV", "", "Cancel");
+    while (!peek_keys(BUTTON1 | BUTTON2 | BUTTON4)) {}
+
+	if (get_keys(BUTTON1))
+    	{
+        	new filename{14} = "PSD%03d.BMP";
+        	select_filename(filename);
+
+        	draw_status(strjoin("Saving ", filename));
+        	if (save_bitmap(filename))
+            	draw_status(strjoin("Saved ", filename));
+        	else
+            	draw_status("Bitmap save failed!");
+    	}
+    	else if (get_keys(BUTTON2))
+    	{
+			new filename{14} = "PSD%03d.CSV";
+        	select_filename(filename);
+        	draw_status(strjoin("Saving ", filename));
+			new File: f = f_open(filename, FA_WRITE | FA_CREATE_NEW);
+			f_write(f, "index,fft,");
+			f_write(f, strjoin( "Sample Rate:,", str(sampleRate), "," ,"psdMaxAC:,", strf(psdMax),",psdMaxIndx:,",str(psdMaxIndx),  "\r\n"));
+
+        	for (new i = 0; i < psdSize; i++)
+				f_write(f, strjoin(  str(i),",", strf(psdMag[i]),  "\r\n"));
+
+        	if (f_close(f))
+            	draw_status(strjoin("Saved ", filename));
+        	else
+            	draw_status("CSV save failed!");
+    }
+    get_keys(ANY_KEY);
+}
+
+
+@button3()
+{
+    configure();
+}
+
+bool: @idle()
+{
+
+	draw_menubar("Measure", "Save", "Config", "Quit");
+
+    get_keys(ANY_KEY);
+    wait_keys(ANY_KEY, 120000);
+    return !get_keys(BUTTON4);
+}
+main()
+{
+	load_calibration();
+	configure(true);
+	draw_text("Use configure to set correct frequency range.", 20, 100, red, black);
+}
+new const program_icon[] = [
+    0b0011111111111111111111111111100,
+    0b0111111110000000000001111111110,
+    0b1111110000000000000000001111111,
+    0b1111100000000000000000000011111,
+    0b1111100000000000000000000011111,
+    0b1110000000000000000000000000111,
+    0b1110011100000000000000000000111,
+    0b1100010000001000000000000000011,
+    0b1100011100010100000000000000011,
+    0b1100000100100010000000000000011,
+    0b1000011100111110000000000000001,
+    0b1000000000100010000100001110001,
+    0b1000000000100010000100001010001,
+    0b1000000000000000000100001010001,
+    0b1000000000000000000100001010001,
+    0b1000000000000000000100101110001,
+    0b1000000000000000000000000000001,
+    0b1100000000000000000000000000011,
+    0b1110000000000000000000000000111,
+    0b1111111111111111111111111111111,
+    0b1111111111111111111111111111111,
+    0b1111111111111111111111111111111,
+    0b0111111111111111111111111111110,
+    0b0011111111111111111111111111100,
+];
+
+//specify display name for program
+new const program_name{} = "Spec An V1.2";
+
+//Mark the program icon and name for inclusion in the binary.
+#include <metadata>
+
