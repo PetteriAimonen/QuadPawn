@@ -1,6 +1,6 @@
 
 /*
-specAn V1.3
+specAn V1.4
 5/26/2012
 Significant changes:
 1. Increased the resolution on the noise floor settings and reduced the lowest value
@@ -139,11 +139,7 @@ configure(bool: load_only = false)
     	else
     		waveout_sinewave(outbuf, outFreq);
 
-    	//dump buffer multiple times to make sure the new signal is
-    	//stable
     	delay_ms(100);
-    	for (new k = 0; k<100; k++)
-    		wavein_read(inbuf);
     }
 
     //configure input channel
@@ -151,6 +147,11 @@ configure(bool: load_only = false)
     wavein_settrigger(Trig_Always);
     wavein_samplerate(sampleRate);
     wavein_start();
+
+    //dump buffer multiple times to make sure the new signal is stable
+    for (new k = 0; k<100; k++)
+    	wavein_read(inbuf);
+
     wavein_autorange();
 
     draw_menubar("Working", "  Please", "Wait", "");
@@ -368,7 +369,7 @@ new const program_icon[] = [
 ];
 
 //specify display name for program
-new const program_name{} = "Spec An V1.3";
+new const program_name{} = "Spec An V1.4";
 
 //Mark the program icon and name for inclusion in the binary.
 #include <metadata>
