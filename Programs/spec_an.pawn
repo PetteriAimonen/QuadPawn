@@ -1,10 +1,22 @@
 
 /*
+specAn V1.3
+5/26/2012
+Significant changes:
+1. Increased the resolution on the noise floor settings and reduced the lowest value
+   from -50 to -40 dB and fixed display calculation to conform to the -40 dB limit
+2. Deleted includes of get/set time.  There are not implemented in for PAWN on the DSO Quad
+   and were left in the code by mistake
+3. Changed initialization of psdMax to psdMax = fix16_min;
+4. Added capability to use DSO Quad signal generator as input to test specAn
+5. Added call to wavein_autorange before measurements to avoid clipping
+
 specAn V1.2
 05/23/2012
-Added call to calibration in main
-Added control of noise floor
-Added display of scales at bottom of plots
+Significant changes:
+1. Added call to calibration in main
+2. Added control of noise floor
+3. Added display of scales at bottom of plots
 
 specAn V1.1
 05/22/2012
@@ -55,16 +67,22 @@ reload any PAWN .amx files you want to use.
 #include <wavein>
 #include <console>
 #include <config>
-#include <calibration>
-#include <time>
 
-native gettime(&hour=0, &minute=0, &second=0);
-native settime(hour=cellmin, minute=cellmin, second=cellmin);
-native getdate(&year=0, &month=0, &day=0);
-native setdate(year=cellmin, month=cellmin, day=cellmin);
+//not used
+//#include <calibration>
+//#include <time>
 
 #define buffSize  1024
 #define psdSize   512
+
+new outbuf{buffSize};
+new waveform_labels[]{} = ["Square","Triangle","Sine"];
+new outFreq_labels[]{} = ["100 Hz", "1 kHz", "10 kHz", "20 kHz"];
+new outFreqs[] = [100, 1000, 10000, 20000];
+new waveform_idx;
+new bool: sigGenOn;
+new outFreq_idx;
+new outFreq;
 
 new inbuf{buffSize};
 new Fixed: real_fft[buffSize];
@@ -87,125 +105,177 @@ new segments_values[] = [1, 10, 100, 500];
 
 new noiseFloor_idx;
 new noiseFloor;
-new noiseFloor_labels[]{} = ["-20 dB", "-30 dB", "-40 dB", "-50 dB"];
-new noiseFloor_values[] = [20, 30, 40, 50];
+new noiseFloor_labels[]{} = ["-40 dB","-35 dB","-30 dB","-25 dB","-20 dB","-15 dB","-10 dB"];
+new noiseFloor_values[] = [40,35,30,25,20,15,10];
 
 configure(bool: load_only = false)
 {
     start_config("specAn.ini", load_only);
     while (do_config())
     {
-        config_multichoice("maxfreq", "Maximum screen frequency", maxfreq_idx, maxfreq_labels, 1);
-		config_multichoice("noise floor", "Noise Floor", noiseFloor_idx, noiseFloor_labels, 1 );
-        config_multichoice("segments", "Number of segments", segments_idx, segments_labels, 1 );
+    	config_multichoice("max freq", "Maximum screen frequency", maxfreq_idx, maxfreq_labels, 1);
+    	config_boolean("sig gen","Signal Genertor", sigGenOn, false);
+    	config_multichoice("sigGen waveform","Sig Gen Waveform", waveform_idx, waveform_labels, 1);
+    	config_multichoice("output freq","Out Frequency", outFreq_idx, outFreq_labels, 1);
+    	config_multichoice("noise floor", "Noise Floor", noiseFloor_idx, noiseFloor_labels, 1 );
+        config_multichoice("segments", "Num Segments to Avg", segments_idx, segments_labels, 1 );
 
     }
     sampleRate = sampleRates[maxfreq_idx];
-	numSegments = segments_values[segments_idx];
-	noiseFloor = noiseFloor_values[noiseFloor_idx];
+    numSegments = segments_values[segments_idx];
+    noiseFloor = noiseFloor_values[noiseFloor_idx];
+    outFreq = outFreqs[outFreq_idx];
 }
 
 @button1()
 {
-	//configure input channel
+    //If it is enabled turn on signal generator
+    if(sigGenOn)
+    {
+    	if(waveform_idx == 0)
+    		waveout_digital(outFreq);
+    	else if(waveform_idx == 1)
+    		waveout_triangle(outbuf, outFreq);
+    	else
+    		waveout_sinewave(outbuf, outFreq);
+
+    	//dump buffer multiple times to make sure the new signal is
+    	//stable
+    	delay_ms(100);
+    	for (new k = 0; k<100; k++)
+    		wavein_read(inbuf);
+    }
+
+    //configure input channel
     config_chA(ADC_DC, ADC_50mV);
-	wavein_settrigger(Trig_Always);
-	wavein_samplerate(sampleRate);
-	wavein_start();
+    wavein_settrigger(Trig_Always);
+    wavein_samplerate(sampleRate);
+    wavein_start();
+    wavein_autorange();
 
-	draw_menubar("Working", "  Please", "Wait", "");
+    draw_menubar("Working", "  Please", "Wait", "");
 
-	//zero out the psdMag array
-	for (new k = 0; k < psdSize; k++)
-	  psdMag[k] = 0;
+    //zero out the psdMag array
+    for (new k = 0; k < psdSize; k++)
+      psdMag[k] = 0;
 
-	//compute fft numSegments times
-	//and combine |fft|^2 results to give a periodogram estimate of PSD
-	for (loopCount = 1; loopCount<=numSegments; loopCount++)
-	{
-		//get inpupt data and compute its fft
-    	wavein_read(inbuf);
-    	fft(inbuf, real_fft, imag_fft, buffSize);
+    //compute fft numSegments times
+    //and combine |fft|^2 results to give a periodogram estimate of PSD
+    for (loopCount = 1; loopCount<=numSegments; loopCount++)
+    {
+    	//get inpupt data and compute its fft
+        wavein_read(inbuf);
+        fft(inbuf, real_fft, imag_fft, buffSize);
 
-		//This line commented out for now.
-		//Just leave DC alone but ignore it for scaling of plot
-		//Subtract the DC offset (check this)
-    	//real_fft[0] -= fixed(128);
+    	//This line commented out for now.
+    	//Just leave DC alone but ignore it for scaling of plot
+    	//Subtract the DC offset (check this)
+        //real_fft[0] -= fixed(128);
 
-	 	//init max value information
-		psdMax = -1000000;
-		psdMaxIndx = 0;
+     	//init max value information
+    	psdMax = fix16_min;
+    	psdMaxIndx = 0;
 
-		//average the PSD estimate
-		//for PSD only need to use 1/2 of buffer size
-		for (new k = 0; k < psdSize; k++)
-		{
-			//save old value to use in recursion
-			new Fixed: fftOldVal = psdMag[k];
-			//compute the mag squared of the fft
-			psdMag[k] = real_fft[k]*real_fft[k] + imag_fft[k]*imag_fft[k];
-			//do recursize combine of measurements
-			psdMag[k] = (psdMag[k] + (loopCount-1)*fftOldVal)/loopCount;
+    	//average the PSD estimate
+    	//for PSD only need to use 1/2 of buffer size
+    	for (new k = 0; k < psdSize; k++)
+    	{
+    		//save old value to use in recursion
+    		new Fixed: fftOldVal = psdMag[k];
+    		//compute the mag squared of the fft
+    		psdMag[k] = real_fft[k]*real_fft[k] + imag_fft[k]*imag_fft[k];
+    		//do recursize combine of measurements
+    		psdMag[k] = (psdMag[k] + (loopCount-1)*fftOldVal)/loopCount;
 
-			//find peak value well above DC
-			if((k>=2) && (psdMag[k] >psdMax))
-			{
-					psdMax = psdMag[k];
-					psdMaxIndx = k;
-			}
-		}
-
-		//normalize everything to the peak value above DC to scale for plot
-		for (new k = 0; k < psdSize; k++)
-			psdMag[k] =  psdMag[k]/psdMax;
-
-		//plot limited by 400 point screen width
-		//so plot only first 400 points on screen of PSD estimate
-		for (new k = 0; k < 400; k++)
-		{
-			//set noise floor scasle and plot
-			new Fixed: fftPlot = FIX(0.00001);
-			fftPlot = 1/100000;
-			fftPlot = fftPlot + psdMag[k];
-			//scale values to force 0 dB point to 180 pixels level on screen
-			new pos = (fround(10 * log10(fftPlot))+noiseFloor)*180/noiseFloor;
-			//clip all values to {0,180] so that large dc values do not damage plott
-			new Color: column[180] = [black];
-        	pos = clamp(pos, 0, 180);
-        	memset(_:column, _:green, pos);
-        	putcolumn(k, 20, column);
+    		//find peak value well above DC
+    		if((k>=2) && (psdMag[k] >psdMax))
+    		{
+    				psdMax = psdMag[k];
+    				psdMaxIndx = k;
+    		}
     	}
-	  //draw_status(strjoin("Saving ", "put stuff here"));
-	    new psdMaxFreq;
 
-		new freqUnits[]{}=[" Hz", " kHz"];
-		new freqUnits_idx;
+    	//normalize everything to the peak value above DC to scale for plot
+    	for (new k = 0; k < psdSize; k++)
+    		psdMag[k] =  psdMag[k]/psdMax;
 
-		if (sampleRate < 36000)
-		{
-			freqUnits_idx = 0;
-			psdMaxFreq = sampleRate;
-		}
-		else
-		{
-			freqUnits_idx = 1;
-			psdMaxFreq = sampleRate/1000
-		}
+    	//plot limited by 400 point screen width
+    	//so plot only first 400 points on screen of PSD estimate
+    	for (new k = 0; k < 400; k++)
+    	{
+    		//set noise floor scasle and plot
+    		new Fixed: fftPlot = FIX(0.0001);
 
-		psdMaxFreq = (psdMaxFreq*psdMaxIndx)/1024;
-		draw_status(strjoin("MaxPSD:", str(psdMaxFreq),freqUnits[freqUnits_idx],
-		"  Scales:[0to", maxfreq_labels[maxfreq_idx],"]", " [-",str(noiseFloor),"to0 dB]" ));
+    		// test to verify that fftPlot is initialized as 0.0001
+    		/*
+    		new buf{14};
+    		buf = strf(fftPlot);
+    		strpad(buf, 12);
+    		draw_text(buf, 200, 120, red, black);
+    		*/
+
+    		fftPlot = fftPlot + psdMag[k];
+    		//scale values to force 0 dB point to 180 pixels level on screen
+    		new pos = (fround(10 * log10(fftPlot))+noiseFloor)*200/noiseFloor;
+    		new Color: column[200] = [black];
+            pos = clamp(pos, 0, 200);
+            memset(_:column, _:green, pos);
+            putcolumn(k, 20, column);
+        }
+
+    	new Fixed: psdMaxFreq;
+    	new freqUnits[]{}=[" Hz", " kHz", " MHz"];
+    	new freqUnits_idx;
+    	new Fixed: freqStep;
+
+    	if (sampleRate < 36000)
+    	{
+    		//units are Hz
+    		freqUnits_idx = 0;
+    		freqStep = sampleRate/buffSize;
+    		psdMaxFreq = psdMaxIndx*freqStep;
+    	}
+    	else if(sampleRate < 36000000)
+    	{
+    		//units are kHz
+    		freqUnits_idx = 1;
+    		freqStep = sampleRate/buffSize;
+    		psdMaxFreq = psdMaxIndx*(freqStep/1000);
+    	}
+    	else
+    	{
+    		//units are MHz
+    		freqUnits_idx = 2;
+    		//make sure frequency step never overflows 2^15
+    		freqStep = sampleRate/(1000*buffSize);
+    		psdMaxFreq = psdMaxIndx*((freqStep/1000));
+
+    		//psdMaxFreq = psdMaxIndx*((freqStep/1000)/1000);
+    	}
+
+    	draw_status(strjoin("MaxPSD:", strf(psdMaxFreq, 1),freqUnits[freqUnits_idx],
+    		"  Scales:[0to", maxfreq_labels[maxfreq_idx],"]", " [-",str(noiseFloor),"to0 dB]" ));
 
 
+    	/*
+    	//leave this inactive block here as a reference for putting
+    	//out put on screen at any location
+    	new buf{14};
+    	buf = str(fround(psdMax));
+    	strpad(buf, 12);
+    	draw_text(buf, 200, 120, red, black);
+    	*/
+    }
 
-		/*
-		//leave this inactive block here as a reference for putting
-		//out put on screen at any location
-		new buf{14};
-		buf = str(fround(psdMax));
-		strpad(buf, 12);
-		draw_text(buf, 200, 120, red, black);
-		*/
+    //draw horizontal grid
+    new ten_dB_Step = (10*200)/ noiseFloor;
+    drawline(0, 20, 400, 20,cyan);
+
+    new hGridSize = noiseFloor/10;
+    for( new gridCount = 1; gridCount <= hGridSize; gridCount++)
+    {
+    	new hPos = gridCount * ten_dB_Step + 20;
+    	drawline(0, hPos, 400, hPos,cyan);
     }
 }
 
@@ -215,33 +285,33 @@ configure(bool: load_only = false)
     draw_menubar("BMP", "CSV", "", "Cancel");
     while (!peek_keys(BUTTON1 | BUTTON2 | BUTTON4)) {}
 
-	if (get_keys(BUTTON1))
-    	{
-        	new filename{14} = "PSD%03d.BMP";
-        	select_filename(filename);
+    if (get_keys(BUTTON1))
+        {
+            new filename{14} = "PSD%03d.BMP";
+            select_filename(filename);
 
-        	draw_status(strjoin("Saving ", filename));
-        	if (save_bitmap(filename))
-            	draw_status(strjoin("Saved ", filename));
-        	else
-            	draw_status("Bitmap save failed!");
-    	}
-    	else if (get_keys(BUTTON2))
-    	{
-			new filename{14} = "PSD%03d.CSV";
-        	select_filename(filename);
-        	draw_status(strjoin("Saving ", filename));
-			new File: f = f_open(filename, FA_WRITE | FA_CREATE_NEW);
-			f_write(f, "index,fft,");
-			f_write(f, strjoin( "Sample Rate:,", str(sampleRate), "," ,"psdMaxAC:,", strf(psdMax),",psdMaxIndx:,",str(psdMaxIndx),  "\r\n"));
+            draw_status(strjoin("Saving ", filename));
+            if (save_bitmap(filename))
+                draw_status(strjoin("Saved ", filename));
+            else
+                draw_status("Bitmap save failed!");
+        }
+        else if (get_keys(BUTTON2))
+        {
+    		new filename{14} = "PSD%03d.CSV";
+            select_filename(filename);
+            draw_status(strjoin("Saving ", filename));
+    		new File: f = f_open(filename, FA_WRITE | FA_CREATE_NEW);
+    		f_write(f, "index,fft,");
+    		f_write(f, strjoin( "Sample Rate:,", str(sampleRate), "," ,"psdMaxAC:,", strf(psdMax),",psdMaxIndx:,",str(psdMaxIndx),  "\r\n"));
 
-        	for (new i = 0; i < psdSize; i++)
-				f_write(f, strjoin(  str(i),",", strf(psdMag[i]),  "\r\n"));
+            for (new i = 0; i < psdSize; i++)
+    			f_write(f, strjoin(  str(i),",", strf(psdMag[i]),  "\r\n"));
 
-        	if (f_close(f))
-            	draw_status(strjoin("Saved ", filename));
-        	else
-            	draw_status("CSV save failed!");
+            if (f_close(f))
+                draw_status(strjoin("Saved ", filename));
+            else
+                draw_status("CSV save failed!");
     }
     get_keys(ANY_KEY);
 }
@@ -254,18 +324,21 @@ configure(bool: load_only = false)
 
 bool: @idle()
 {
-
-	draw_menubar("Measure", "Save", "Config", "Quit");
-
+    draw_menubar("Measure", "Save", "Config", "Quit");
     get_keys(ANY_KEY);
     wait_keys(ANY_KEY, 120000);
     return !get_keys(BUTTON4);
 }
 main()
 {
-	load_calibration();
-	configure(true);
-	draw_text("Use configure to set correct frequency range.", 20, 100, red, black);
+    //need to understand the functionality of this before implementing it in code
+    //load_calibration();
+
+    configure(true);
+    draw_text("specAn V1.3 last modified on 5/26/2012", 20, 120, cyan);
+    draw_text("Use configure to set correct frequency range.", 20, 70, green);
+    draw_text("Plots are scaled so peak above dc is at 0dB.", 20, 50, green);
+    draw_text("Horizontal lines on plots are 10 dB apart", 20, 30, green)
 }
 new const program_icon[] = [
     0b0011111111111111111111111111100,
@@ -295,7 +368,7 @@ new const program_icon[] = [
 ];
 
 //specify display name for program
-new const program_name{} = "Spec An V1.2";
+new const program_name{} = "Spec An V1.3";
 
 //Mark the program icon and name for inclusion in the binary.
 #include <metadata>
