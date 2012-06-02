@@ -53,6 +53,10 @@ main()
     TEST_STR(strf(FIX(-0.99999)), "-1.0000");
     
     TEST_STR(strf(FIX(-179.99), 1), "-180.0"); 
+
+    new a = 40;
+    new b = 1;
+    TEST_NUM(200 - a * b, 160);
     
     println("Tests complete.");
 }
