@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: amx.h 4535 2011-07-07 09:15:22Z thiadmer $
+ *  Version: $Id: amx.h 4642 2012-01-16 08:34:08Z thiadmer $
  */
 
 #ifndef AMX_H_INCLUDED
@@ -447,7 +447,7 @@ enum {
 
 uint16_t * AMXAPI amx_Align16(uint16_t *v);
 uint32_t * AMXAPI amx_Align32(uint32_t *v);
-#if defined _I64_MAX || defined HAVE_I64
+#if defined _I64_MAX || defined INT64_MAX || defined HAVE_I64
   uint64_t * AMXAPI amx_Align64(uint64_t *v);
 #endif
 int AMXAPI amx_Allot(AMX *amx, int cells, cell **address);
@@ -496,7 +496,7 @@ int AMXAPI amx_UTF8Put(char *string, char **endptr, int maxchars, cell value);
   #define amx_AlignCell(v) amx_Align16(v)
 #elif PAWN_CELL_SIZE==32
   #define amx_AlignCell(v) amx_Align32(v)
-#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined HAVE_I64)
+#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined INT64_MAX || defined HAVE_I64)
   #define amx_AlignCell(v) amx_Align64(v)
 #else
   #error Unsupported cell size

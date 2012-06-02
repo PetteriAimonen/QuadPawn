@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc6.c 4541 2011-07-21 12:15:13Z thiadmer $
+ *  Version: $Id: sc6.c 4641 2012-01-16 08:15:57Z thiadmer $
  */
 #include <assert.h>
 #include <stdio.h>
@@ -424,7 +424,7 @@ static cell do_case(FILE *fbin,const char *params,cell opcode,cell cip)
   return opcodes(0)+opargs(2);
 }
 
-static cell do_icase(FILE *fbin,const char *params,cell opcode,cell cip)
+static cell do_caseovl(FILE *fbin,const char *params,cell opcode,cell cip)
 {
   ucell v=hex2ucell(params,&params);
   ucell p=hex2ucell(params,NULL);
@@ -457,6 +457,7 @@ static OPCODE opcodelist[] = {
   { 33, "call",        sIN_CSEG, do_call,  1 },
   { 77, "call.ovl",    sIN_CSEG, parm1,    1 },
   {  0, "case",        sIN_CSEG, do_case,  1 },
+  {  0, "case.ovl",    sIN_CSEG, do_caseovl, 1 },
   { 74, "casetbl",     sIN_CSEG, parm0,    1 },
   { 80, "casetbl.ovl", sIN_CSEG, parm0,    1 },
   { 65, "cmps",        sIN_CSEG, parm1,    1 },
@@ -488,7 +489,6 @@ static OPCODE opcodelist[] = {
   {173, "halt.p",      sIN_CSEG, parm1_p,  3 },
   { 29, "heap",        sIN_CSEG, parm1,    1 },
   {157, "heap.p",      sIN_CSEG, parm1_p,  3 },
-  {  0, "icase",       sIN_CSEG, do_icase, 1 },
   { 83, "idxaddr",     sIN_CSEG, parm0,    2 },
   { 84, "idxaddr.b",   sIN_CSEG, parm1,    2 },
   {140, "idxaddr.p.b", sIN_CSEG, parm1_p,  3 },
@@ -734,7 +734,7 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
         assert(strlen(sym->name)<=sNAMEMAX);
         strcpy(alias,sym->name);
       } /* if */
-      nametablesize+=strlen(alias)+1;
+      nametablesize+=(int)strlen(alias)+1;
     } /* if */
   } /* for */
   assert(numnatives==ntv_funcid);
@@ -746,7 +746,7 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
       if (constptr->value>0) {
         assert(strlen(constptr->name)>0);
         numlibraries++;
-        nametablesize+=strlen(constptr->name)+1;
+        nametablesize+=(int)strlen(constptr->name)+1;
       } /* if */
     } /* for */
   } /* if */
@@ -757,7 +757,7 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
     if ((constptr->value & PUBLICTAG)!=0) {
       assert(strlen(constptr->name)>0);
       numtags++;
-      nametablesize+=strlen(constptr->name)+1;
+      nametablesize+=(int)strlen(constptr->name)+1;
     } /* if */
   } /* for */
 
@@ -835,8 +835,8 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
       pc_resetbin(fout,hdr.publics+count*sizeof(AMX_FUNCSTUB));
       pc_writebin(fout,&func,sizeof func);
       pc_resetbin(fout,nameofs);
-      pc_writebin(fout,sym->name,strlen(sym->name)+1);
-      nameofs+=strlen(sym->name)+1;
+      pc_writebin(fout,sym->name,(int)strlen(sym->name)+1);
+      nameofs+=(int)strlen(sym->name)+1;
       count++;
     } /* if */
   } /* for */
@@ -884,8 +884,8 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
       pc_resetbin(fout,hdr.natives+count*sizeof(AMX_FUNCSTUB));
       pc_writebin(fout,&func,sizeof func);
       pc_resetbin(fout,nameofs);
-      pc_writebin(fout,alias,strlen(alias)+1);
-      nameofs+=strlen(alias)+1;
+      pc_writebin(fout,alias,(int)strlen(alias)+1);
+      nameofs+=(int)strlen(alias)+1;
       count++;
     } /* for */
     free(nativelist);
@@ -906,8 +906,8 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
         pc_resetbin(fout,hdr.libraries+count*sizeof(AMX_FUNCSTUB));
         pc_writebin(fout,&func,sizeof func);
         pc_resetbin(fout,nameofs);
-        pc_writebin(fout,constptr->name,strlen(constptr->name)+1);
-        nameofs+=strlen(constptr->name)+1;
+        pc_writebin(fout,constptr->name,(int)strlen(constptr->name)+1);
+        nameofs+=(int)strlen(constptr->name)+1;
         count++;
       } /* if */
     } /* for */
@@ -928,8 +928,8 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
       pc_resetbin(fout,hdr.pubvars+count*sizeof(AMX_FUNCSTUB));
       pc_writebin(fout,&func,sizeof func);
       pc_resetbin(fout,nameofs);
-      pc_writebin(fout,sym->name,strlen(sym->name)+1);
-      nameofs+=strlen(sym->name)+1;
+      pc_writebin(fout,sym->name,(int)strlen(sym->name)+1);
+      nameofs+=(int)strlen(sym->name)+1;
       count++;
     } /* if */
   } /* for */
@@ -948,8 +948,8 @@ SC_FUNC int assemble(FILE *fout,FILE *fin)
       pc_resetbin(fout,hdr.tags+count*sizeof(AMX_FUNCSTUB));
       pc_writebin(fout,&func,sizeof func);
       pc_resetbin(fout,nameofs);
-      pc_writebin(fout,constptr->name,strlen(constptr->name)+1);
-      nameofs+=strlen(constptr->name)+1;
+      pc_writebin(fout,constptr->name,(int)strlen(constptr->name)+1);
+      nameofs+=(int)strlen(constptr->name)+1;
       count++;
     } /* if */
   } /* for */
@@ -1169,7 +1169,7 @@ static void append_dbginfo(FILE *fout)
         if (prevstr!=NULL) {
           assert(prevname!=NULL);
           dbghdr.files++;
-          dbghdr.size+=sizeof(AMX_DBG_FILE)+strlen(prevname);
+          dbghdr.size+=(int32_t)(sizeof(AMX_DBG_FILE)+strlen(prevname));
         } /* if */
         previdx=codeidx;
       } /* if */
@@ -1180,7 +1180,7 @@ static void append_dbginfo(FILE *fout)
   if (prevstr!=NULL) {
     assert(prevname!=NULL);
     dbghdr.files++;
-    dbghdr.size+=sizeof(AMX_DBG_FILE)+strlen(prevname);
+    dbghdr.size+=(int32_t)(sizeof(AMX_DBG_FILE)+strlen(prevname));
   } /* if */
 
   /* line number table */
@@ -1206,7 +1206,7 @@ static void append_dbginfo(FILE *fout)
       assert(str!=NULL);
       assert((int)(str-name)<sizeof symname);
       strlcpy(symname,name,(int)(str-name)+1);
-      dbghdr.size+=sizeof(AMX_DBG_SYMBOL)+strlen(symname);
+      dbghdr.size+=(int32_t)(sizeof(AMX_DBG_SYMBOL)+strlen(symname));
       if ((prevstr=strchr(name,'['))!=NULL)
         while ((prevstr=strchr(prevstr+1,':'))!=NULL)
           dbghdr.size+=sizeof(AMX_DBG_SYMDIM);
@@ -1217,21 +1217,21 @@ static void append_dbginfo(FILE *fout)
   for (constptr=tagname_tab.next; constptr!=NULL; constptr=constptr->next) {
     assert(strlen(constptr->name)>0);
     dbghdr.tags++;
-    dbghdr.size+=sizeof(AMX_DBG_TAG)+strlen(constptr->name);
+    dbghdr.size+=(int32_t)(sizeof(AMX_DBG_TAG)+strlen(constptr->name));
   } /* for */
 
   /* automaton table */
   for (constptr=sc_automaton_tab.next; constptr!=NULL; constptr=constptr->next) {
     assert(constptr->index==0 && strlen(constptr->name)==0 || strlen(constptr->name)>0);
     dbghdr.automatons++;
-    dbghdr.size+=sizeof(AMX_DBG_MACHINE)+strlen(constptr->name);
+    dbghdr.size+=(int32_t)(sizeof(AMX_DBG_MACHINE)+strlen(constptr->name));
   } /* for */
 
   /* state table */
   for (constptr=sc_state_tab.next; constptr!=NULL; constptr=constptr->next) {
     assert(strlen(constptr->name)>0);
     dbghdr.states++;
-    dbghdr.size+=sizeof(AMX_DBG_STATE)+strlen(constptr->name);
+    dbghdr.size+=(int32_t)(sizeof(AMX_DBG_STATE)+strlen(constptr->name));
   } /* for */
 
 
@@ -1265,7 +1265,7 @@ static void append_dbginfo(FILE *fout)
             align32(&previdx);
           #endif
           writeerror |= !pc_writebin(fout,&previdx,sizeof(uint32_t));
-          writeerror |= !pc_writebin(fout,prevname,strlen(prevname)+1);
+          writeerror |= !pc_writebin(fout,prevname,(int)strlen(prevname)+1);
         } /* if */
         previdx=codeidx;
       } /* if */
@@ -1279,7 +1279,7 @@ static void append_dbginfo(FILE *fout)
       align32(&previdx);
     #endif
     writeerror |= !pc_writebin(fout,&previdx,sizeof(uint32_t));
-    writeerror |= !pc_writebin(fout,prevname,strlen(prevname)+1);
+    writeerror |= !pc_writebin(fout,prevname,(int)strlen(prevname)+1);
   } /* if */
 
   /* line number table */
@@ -1338,7 +1338,7 @@ static void append_dbginfo(FILE *fout)
       writeerror |= !pc_writebin(fout,&dbgsym.ident,sizeof dbgsym.ident);
       writeerror |= !pc_writebin(fout,&dbgsym.vclass,sizeof dbgsym.vclass);
       writeerror |= !pc_writebin(fout,&dbgsym.dim,sizeof dbgsym.dim);
-      writeerror |= !pc_writebin(fout,symname,strlen(symname)+1);
+      writeerror |= !pc_writebin(fout,symname,(int)strlen(symname)+1);
       for (dim=0; dim<dbgsymdim; dim++) {
         #if BYTE_ORDER==BIG_ENDIAN
           align16(&dbgidxtag[dim].tag);
@@ -1358,7 +1358,7 @@ static void append_dbginfo(FILE *fout)
       align16(&id1);
     #endif
     writeerror |= !pc_writebin(fout,&id1,sizeof id1);
-    writeerror |= !pc_writebin(fout,constptr->name,strlen(constptr->name)+1);
+    writeerror |= !pc_writebin(fout,constptr->name,(int)strlen(constptr->name)+1);
   } /* for */
 
   /* automaton table */
@@ -1372,7 +1372,7 @@ static void append_dbginfo(FILE *fout)
     #endif
     writeerror |= !pc_writebin(fout,&id1,sizeof id1);
     writeerror |= !pc_writebin(fout,&address,sizeof(uint32_t));
-    writeerror |= !pc_writebin(fout,constptr->name,strlen(constptr->name)+1);
+    writeerror |= !pc_writebin(fout,constptr->name,(int)strlen(constptr->name)+1);
   } /* for */
 
   /* state table */
@@ -1387,7 +1387,7 @@ static void append_dbginfo(FILE *fout)
     #endif
     writeerror |= !pc_writebin(fout,&id1,sizeof id1);
     writeerror |= !pc_writebin(fout,&id2,sizeof id2);
-    writeerror |= !pc_writebin(fout,constptr->name,strlen(constptr->name)+1);
+    writeerror |= !pc_writebin(fout,constptr->name,(int)strlen(constptr->name)+1);
   } /* for */
 
   delete_dbgstringtable();

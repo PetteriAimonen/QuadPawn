@@ -17,7 +17,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: scmemfil.c 4523 2011-06-21 15:03:47Z thiadmer $
+ *  Version: $Id: scmemfil.c 4611 2011-12-05 17:46:53Z thiadmer $
  */
 
 #include <assert.h>
@@ -55,12 +55,12 @@ SC_FUNC int mfdump(memfile_t *mf)
   return okay;
 }
 
-SC_FUNC long mflength(const memfile_t *mf)
+SC_FUNC size_t mflength(const memfile_t *mf)
 {
   return mf->usedoffs;
 }
 
-SC_FUNC long mfseek(memfile_t *mf,long offset,int whence)
+SC_FUNC size_t mfseek(memfile_t *mf,long offset,int whence)
 {
   long length;
 
@@ -69,18 +69,18 @@ SC_FUNC long mfseek(memfile_t *mf,long offset,int whence)
     return 0L;          /* early exit: not a single byte in the file */
 
   /* find the size of the memory file */
-  length=mflength(mf);
+  length=(long)mflength(mf);
 
   /* convert the offset to an absolute position */
   switch (whence) {
   case SEEK_SET:
     break;
   case SEEK_CUR:
-    offset+=mf->offs;
+    offset+=(long)mf->offs;
     break;
   case SEEK_END:
     assert(offset<=0);
-    offset+=length;
+    offset+=(long)length;
     break;
   } /* switch */
 
@@ -91,24 +91,24 @@ SC_FUNC long mfseek(memfile_t *mf,long offset,int whence)
     offset=length;
 
   /* set new position and return it */
-  memfile_seek(mf, offset);
+  memfile_seek(mf, (size_t)offset);
   return offset;
 }
 
-SC_FUNC unsigned int mfwrite(memfile_t *mf,const unsigned char *buffer,unsigned int size)
+SC_FUNC size_t mfwrite(memfile_t *mf,const unsigned char *buffer,size_t size)
 {
   return (memfile_write(mf, buffer, size) ? size : 0);
 }
 
-SC_FUNC unsigned int mfread(memfile_t *mf,unsigned char *buffer,unsigned int size)
+SC_FUNC size_t mfread(memfile_t *mf,unsigned char *buffer,size_t size)
 {
   return memfile_read(mf, buffer, size);
 }
 
-SC_FUNC char *mfgets(memfile_t *mf,char *string,unsigned int size)
+SC_FUNC char *mfgets(memfile_t *mf,char *string,size_t size)
 {
   char *ptr;
-  unsigned int read;
+  size_t read;
   long seek;
 
   assert(mf!=NULL);
@@ -144,7 +144,7 @@ SC_FUNC char *mfgets(memfile_t *mf,char *string,unsigned int size)
 
 SC_FUNC int mfputs(memfile_t *mf,const char *string)
 {
-  unsigned int written,length;
+  size_t written,length;
 
   assert(mf!=NULL);
 

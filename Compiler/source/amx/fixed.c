@@ -4,7 +4,7 @@
  *  library decimal fixed point numbers with an configurable number of
  *  decimals. The current setting is 3 decimals.
  *
- *  Copyright (c) ITB CompuPhase, 1998-2011
+ *  Copyright (c) ITB CompuPhase, 1998-2012
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not
  *  use this file except in compliance with the License. You may obtain a copy
@@ -18,7 +18,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: fixed.c 4523 2011-06-21 15:03:47Z thiadmer $
+ *  Version: $Id: fixed.c 4708 2012-05-18 12:52:49Z  $
  */
 #include <assert.h>
 #include <stdio.h>      /* for NULL */
@@ -116,9 +116,11 @@ static cell AMX_NATIVE_CALL n_strfixed(AMX *amx,const cell *params)
    */
   #define USE_ANSI_C    0
 
-#elif defined __GNUC__                                  /* GNU GCC */
+#elif defined __GNUC__ && !defined __ARM_ARCH_4T__      /* GNU GCC */
   /* ANSI 64-bit division routine not needed for GNU GCC because it
-   * supports 64-bit integers
+   * supports 64-bit integers; however, on ARM7TDMI the 64-bit division
+   * is implemented in a library function that typically requires exception
+   * handling
    */
   #define USE_ANSI_C    0
 
@@ -146,6 +148,7 @@ static cell AMX_NATIVE_CALL n_strfixed(AMX *amx,const cell *params)
   static ucell div64_32(ucell t[2], ucell divisor)
   {
     /* This function was adapted from source code that appeared in
+     * "Multiple-Precision Arithmetic in C", Burton S. Kaliski, Jr.
      * Dr. Dobb's Journal, August 1992, page 117.
      */
     ucell u, v;

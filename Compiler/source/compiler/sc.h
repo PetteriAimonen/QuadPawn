@@ -23,7 +23,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc.h 4535 2011-07-07 09:15:22Z thiadmer $
+ *  Version: $Id: sc.h 4611 2011-12-05 17:46:53Z thiadmer $
  */
 #ifndef SC_H_INCLUDED
 #define SC_H_INCLUDED
@@ -773,11 +773,11 @@ SC_FUNC void delete_dbgstringtable(void);
 SC_FUNC memfile_t *mfcreate(const char *filename);
 SC_FUNC void mfclose(memfile_t *mf);
 SC_FUNC int mfdump(memfile_t *mf);
-SC_FUNC long mflength(const memfile_t *mf);
-SC_FUNC long mfseek(memfile_t *mf,long offset,int whence);
-SC_FUNC unsigned int mfwrite(memfile_t *mf,const unsigned char *buffer,unsigned int size);
-SC_FUNC unsigned int mfread(memfile_t *mf,unsigned char *buffer,unsigned int size);
-SC_FUNC char *mfgets(memfile_t *mf,char *string,unsigned int size);
+SC_FUNC size_t mflength(const memfile_t *mf);
+SC_FUNC size_t mfseek(memfile_t *mf,long offset,int whence);
+SC_FUNC size_t mfwrite(memfile_t *mf,const unsigned char *buffer,size_t size);
+SC_FUNC size_t mfread(memfile_t *mf,unsigned char *buffer,size_t size);
+SC_FUNC char *mfgets(memfile_t *mf,char *string,size_t size);
 SC_FUNC int mfputs(memfile_t *mf,const char *string);
 
 /* function prototypes in SCI18N.C */

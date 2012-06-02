@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc3.c 4541 2011-07-21 12:15:13Z thiadmer $
+ *  Version: $Id: sc3.c 4611 2011-12-05 17:46:53Z thiadmer $
  */
 #include <assert.h>
 #include <stdio.h>
@@ -1470,7 +1470,7 @@ static int hier2(value *lval)
     if (sym!=NULL && sym->ident!=iFUNCTN && sym->ident!=iREFFUNC && (sym->usage & uDEFINE)==0)
       sym=NULL;                 /* symbol is not a function, it is in the table, but not "defined" */
     val= (sym!=NULL);
-    if (!val && find_subst(st,strlen(st))!=NULL)
+    if (!val && find_subst(st,(int)strlen(st))!=NULL)
       val=1;
     clear_value(lval);
     lval->ident=iCONSTEXPR;

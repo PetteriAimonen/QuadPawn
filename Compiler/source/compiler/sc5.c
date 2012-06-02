@@ -16,7 +16,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc5.c 4535 2011-07-07 09:15:22Z thiadmer $
+ *  Version: $Id: sc5.c 4611 2011-12-05 17:46:53Z thiadmer $
  */
 #include <assert.h>
 #if defined	__WIN32__ || defined _WIN32 || defined __MSDOS__
@@ -129,7 +129,7 @@ static short lastfile;
     int len;
     assert(notice<sizearray(noticemsg));
     strcat(string,"; ");
-    len=strlen(string);
+    len=(int)strlen(string);
     strexpand(string+len,(unsigned char *)noticemsg[notice],sizeof string-len-1,SCPACK_TABLE);
   } /* if */
   strcat(string,"\n");
@@ -323,8 +323,8 @@ SC_FUNC int levenshtein_distance(const char *s,const char*t)
   //Step 1
   int k,i,j,cost,distance;
   int *d;
-  int n=strlen(s);
-  int m=strlen(t);
+  int n=(int)strlen(s);
+  int m=(int)strlen(t);
   assert(n>0 && m>0);
   d=(int*)malloc((sizeof(int))*(m+1)*(n+1));
   m++;
@@ -358,7 +358,7 @@ static int find_closestsymbol_table(const char *name,const symbol *root,int symb
   assert(closestsym!=NULL);
   *closestsym=NULL;
   assert(name!=NULL);
-  critdist=strlen(name)/2;  /* for short names, allow only a single edit */
+  critdist=(int)strlen(name)/2;  /* for short names, allow only a single edit */
   if (critdist>MAX_EDIT_DIST)
     critdist=MAX_EDIT_DIST;
   while (sym!=NULL) {

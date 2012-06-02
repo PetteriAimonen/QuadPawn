@@ -41,7 +41,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc7.c 4523 2011-06-21 15:03:47Z thiadmer $
+ *  Version: $Id: sc7.c 4611 2011-12-05 17:46:53Z thiadmer $
  */
 #include <assert.h>
 #include <stdio.h>
@@ -209,10 +209,10 @@ SC_FUNC void stgwrite(const char *st)
     CHECK_STGBUFFER(stgidx);
     stgbuf[stgidx++]='\0';
   } else {
-    len=(stgbuf!=NULL) ? strlen(stgbuf) : 0;
-    CHECK_STGBUFFER(len+strlen(st)+1);
+    len=(stgbuf!=NULL) ? (int)strlen(stgbuf) : 0;
+    CHECK_STGBUFFER(len+(int)strlen(st)+1);
     strcat(stgbuf,st);
-    len=strlen(stgbuf);
+    len=(int)strlen(stgbuf);
     if (len>0 && stgbuf[len-1]=='\n') {
       filewrite(stgbuf);
       stgbuf[0]='\0';
@@ -252,7 +252,7 @@ SC_FUNC void stgout(int index)
       /* there is no sense in re-optimizing if the order of the sub-expressions
        * did not change; so output directly
        */
-      for (idx=0; idx<pipeidx; idx+=strlen(stgpipe+idx)+1)
+      for (idx=0; idx<pipeidx; idx+=(int)strlen(stgpipe+idx)+1)
         filewrite(stgpipe+idx);
     } /* if */
   } /* if */
@@ -625,7 +625,7 @@ static char *replacesequence(const char *pattern,char symbols[MAX_OPT_VARS+1][MA
       assert(var>=0 && var<=MAX_OPT_VARS);
       assert(symbols[var][0]!='\0' || optsym);  /* variable should be defined */
       assert(var!=0 || strlen(symbols[var])==pc_cellsize || (symbols[var][0]=='-' && strlen(symbols[var])==pc_cellsize+1) || atoi(symbols[var])==0);
-      *repl_length+=strlen(symbols[var]);
+      *repl_length+=(int)strlen(symbols[var]);
       optsym=FALSE;
       break;
     case '~': /* optional space followed by optional symbol */
@@ -655,8 +655,10 @@ static char *replacesequence(const char *pattern,char symbols[MAX_OPT_VARS+1][MA
   } /* while */
 
   /* allocate a buffer to replace the sequence in */
-  if ((buffer=(char*)malloc(*repl_length))==NULL)
-    return (char*)error(103);
+  if ((buffer=(char*)malloc(*repl_length))==NULL) {
+	error(103);
+    return NULL;
+  } /* if */
 
   /* replace the pattern into this temporary buffer */
   optsym=FALSE;

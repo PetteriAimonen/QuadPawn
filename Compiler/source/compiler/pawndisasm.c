@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: pawndisasm.c 4548 2011-08-01 09:35:40Z thiadmer $
+ *  Version: $Id: pawndisasm.c 4641 2012-01-16 08:15:57Z thiadmer $
  */
 #include <assert.h>
 #include <stdio.h>
@@ -44,7 +44,7 @@ cell do_call(FILE *ftxt,const cell *params,cell opcode,cell cip);
 cell do_jump(FILE *ftxt,const cell *params,cell opcode,cell cip);
 cell do_switch(FILE *ftxt,const cell *params,cell opcode,cell cip);
 cell casetbl(FILE *ftxt,const cell *params,cell opcode,cell cip);
-cell icasetbl(FILE *ftxt,const cell *params,cell opcode,cell cip);
+cell casetbl_ovl(FILE *ftxt,const cell *params,cell opcode,cell cip);
 
 
 typedef struct {
@@ -134,7 +134,7 @@ static OPCODE opcodelist[] = {
   { 77, "call.ovl",    parm1 },
   { 78, "retn.ovl",    parm0 },
   { 79, "switch.ovl",  do_switch },
-  { 80, "casetbl.ovl", icasetbl },
+  { 80, "casetbl.ovl", casetbl_ovl },
   { 81, "lidx",        parm0 },
   { 82, "lidx.b",      parm1 },
   { 83, "idxaddr",     parm0 },
@@ -386,7 +386,7 @@ cell casetbl(FILE *ftxt,const cell *params,cell opcode,cell cip)
   return 2*num+1;
 }
 
-cell icasetbl(FILE *ftxt,const cell *params,cell opcode,cell cip)
+cell casetbl_ovl(FILE *ftxt,const cell *params,cell opcode,cell cip)
 {
   cell num;
   int idx;

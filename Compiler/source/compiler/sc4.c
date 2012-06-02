@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: sc4.c 4523 2011-06-21 15:03:47Z thiadmer $
+ *  Version: $Id: sc4.c 4641 2012-01-16 08:15:57Z thiadmer $
  */
 #include <assert.h>
 #include <ctype.h>
@@ -865,7 +865,7 @@ SC_FUNC void ffcase(cell value,int label,int newtable,int icase)
     code_idx+=opcodes(1);
   } /* if */
   if (icase)
-    stgwrite("\ticase ");
+    stgwrite("\tcase.ovl ");
   else
     stgwrite("\tcase ");
   outval(value,TRUE,FALSE);

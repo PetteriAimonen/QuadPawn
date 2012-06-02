@@ -14,7 +14,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: amxfile.c 4548 2011-08-01 09:35:40Z thiadmer $
+ *  Version: $Id: amxfile.c 4611 2011-12-05 17:46:53Z thiadmer $
  */
 #if defined _UNICODE || defined __UNICODE__ || defined UNICODE
 # if !defined UNICODE   /* for Windows */
@@ -96,6 +96,9 @@
 #endif
 #if !(defined __WIN32__ || defined _WIN32 || defined WIN32)
   #define _stat(n,b)  stat(n,b)
+#endif
+#if !defined S_ISDIR
+  #define S_ISDIR(mode) (((mode) & _S_IFDIR) != 0)
 #endif
 
 #include "minIni.c"

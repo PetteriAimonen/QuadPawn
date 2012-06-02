@@ -26,7 +26,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  *
- *  Version: $Id: amxpool.c 4523 2011-06-21 15:03:47Z thiadmer $
+ *  Version: $Id: amxpool.c 37 2012-05-18 13:14:55Z thiadmer.riemersma@gmail.com $
  */
 #include <assert.h>
 #include "amx.h"
