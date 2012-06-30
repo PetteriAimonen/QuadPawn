@@ -4,6 +4,7 @@
 
 #include <buttons>
 #include <core>
+#include <device>
 #include <dialog>
 #include <draw>
 #include <file>

@@ -44,6 +44,7 @@ int amxcleanup_file(AMX *amx);
 int amxinit_buttons(AMX *amx);
 int amxinit_fourier(AMX *amx);
 int amxinit_time(AMX *amx);
+int amxinit_device(AMX *amx);
 int amx_timer_doevents(AMX *amx);
 
 register void *stack_pointer asm("sp");
@@ -194,6 +195,7 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_buttons(&amx);
     amxinit_fourier(&amx);
     amxinit_time(&amx);
+    amxinit_device(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);

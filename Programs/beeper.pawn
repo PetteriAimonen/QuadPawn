@@ -1,0 +1,74 @@
+/* This program beeps when a positive voltage > 0.5 volt is applied to the Ch A
+ * input. It also gives a 1V output on waveout, so it can be used to check
+ * conductivity of e.g. PCB traces.
+ */
+
+#include <calibration>
+#include <config>
+
+new Fixed: threshold;
+new Fixed: output_voltage;
+new volume;
+new beep_freq;
+
+configure(bool: load_only = false)
+{
+    start_config("beeper.ini", load_only);
+    while (do_config())
+    {
+        config_fixed("threshold", "Voltage threshold", threshold,
+                     FIX(0.5), FIX(0.1), FIX(0.1), FIX(10.0));
+        config_fixed("output_voltage", "Waveout voltage", output_voltage,
+                     FIX(1.0), FIX(0.1), FIX(0.1), FIX(10.0));
+        config_integer("volume", "Beep volume", volume,
+                       10, 0, 100);
+        config_integer("beep_freq", "Beep frequency", beep_freq,
+                       500, 100, 5000);
+    }
+}
+
+main()
+{
+    configure(true);
+    
+    clear_screen();
+    draw_menubar("", "", "Config", "Quit");
+    
+    load_calibration();
+    
+    wavein_samplerate(100000);
+    wavein_settrigger(Trig_Always);
+    config_chA(ADC_DC, ADC_1V);
+    
+    while (!get_keys(BUTTON4))
+    {
+        if (get_keys(BUTTON3))
+        {
+            configure();
+            
+            clear_screen();
+            draw_menubar("", "", "Config", "Quit");
+        }
+
+        waveout_voltage(output_voltage);
+        
+        new Fixed: avgA;
+        
+        wavein_start();
+        wavein_aggregate(.avgA = avgA, .count = 100);
+        
+        avgA = get_voltage(Ch_A, avgA);
+        
+        new buf{10};
+        buf = strf(avgA, 1);
+        strcat(buf, " V");
+        strpad(buf, 8);
+        draw_text(strjoin("Voltage: ", buf),
+                  100, 100, .fg = green, .bg = black);
+        
+        if (avgA > FIX(0.5))
+        {
+            beep(10, beep_freq, volume);
+        }
+    }
+}

@@ -11,7 +11,7 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	amx.o amxexec.o amxaux.o amxpool.o amx_debug.o \
 	amx_draw.o amx_core.o amx_string.o amx_fixed.o amx_wavein.o \
 	amx_waveout.o amx_menu.o amx_file.o amx_buttons.o amx_fourier.o \
-	amx_time.o \
+	amx_time.o amx_device.o \
 	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o
 
 COMMITID := $(shell git describe --always || echo unknown)

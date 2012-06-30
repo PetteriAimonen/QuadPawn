@@ -57,11 +57,14 @@ void __irq__ TIM3_IRQHandler(void)
             KEYS_PRESSED |= (keys & REPEAT_KEYS);
     }
     
-    if (BEEP_TIME >= 0)
+    if (BEEP_TIME > 0)
     {
         BEEP_TIME--;
         if (BEEP_TIME <= 0)
+        {
             __Set(BEEP_VOLUME, 0);
+            TIM8->PSC = 200 - 1; // Restore original frequency for backlight.
+        }
     }
     
     TimerTick();
