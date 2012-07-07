@@ -56,6 +56,9 @@ _OBJS = $(addprefix build/,$(OBJS))
 
 all: $(NAME).HEX
 
+build_dir:
+	mkdir build
+
 clean:
 	$(RM) $(NAME).HEX build/*
 
@@ -90,7 +93,7 @@ build/ff.o: fatfs/ff.c fatfs/*.h
 build/%.o: libfixmath/%.c
 	$(CC) $(CFLAGS) -DFIXMATH_NO_CACHE -c -o $@ $<
 
-build/%.o: %.c *.h
+build/%.o: %.c *.h | build_dir
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 build/%.o: DS203/%.c
