@@ -57,7 +57,7 @@ _OBJS = $(addprefix build/,$(OBJS))
 all: $(NAME).HEX
 
 build_dir:
-	mkdir build
+	mkdir -p build
 
 clean:
 	$(RM) $(NAME).HEX build/*
