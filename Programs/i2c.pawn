@@ -9,8 +9,10 @@ const HIGH = 1
 const SCL = 0
 const SDA = 1
 const EvType: { NIL = 0, START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION }
+new char_for_event_type{} = "?S01P"
 
 const Color: orange = RGB( 0xee, 0x66, 0x22)
+const Color: darkgray = RGB( 0x33, 0x33, 0x33)
 
 const Color: SCL_COLOR = yellow
 const Color: SDA_COLOR = cyan
@@ -117,8 +119,18 @@ analyze( samples[]{})
         events[num_events].when_happened = t
         events[num_events].source = line
         events[num_events].new_level = level
+        if ( SDA == line  &&  HIGH == previous_level_of_line[ SCL])
+        {
+          events[num_events].type = LOW == level ? START_CONDITION : STOP_CONDITION
+        }
+        else if ( SCL == line  &&  HIGH == level)
+        {
+          events[num_events].type = LOW == previous_level_of_line[ SDA] ? TRANSMITTED_ZERO : TRANSMITTED_ONE
+        }
+        else {
+          events[num_events].type = NIL
+        }
         num_events += 1
-        // event.type // TODO: Detect onditions, 0, 1, etc
         previous_level_of_line[ line] = level
       }
     }
@@ -167,10 +179,7 @@ render()
   // explanations of events overlap
 
   // Blank out the previous render of the traces:
-  for ( new  t = 0;  t < sizeof traces;  t += 1)
-  {
-    fill_rectangle( 0, traces[t].y, view.width, trace_height + 1, black)
-  }
+  fill_rectangle( 0, 100 - 10 - fontheight, view.width, 190 - (90 - fontheight) + 1, black);
 
   // These are X ordinates on the screen of the rendered event just previously
   new  previous_x_for_trace[] = [ 0, 0]
@@ -194,6 +203,15 @@ render()
 
     if ( view.from < event.when_happened)
     {
+      if ( event.type != NIL)
+      {
+        drawline( new_x, 190, new_x, 100 - 10, darkgray)
+        new  text{2}
+        text{0} = char_for_event_type{ event.type}
+        text{1} = 0
+        draw_text( text, (new_x - 4), 100 - 10 - fontheight, TEXT_COLOR, black)
+      }
+
       // Draw the horizontal line that represents the signal maintaining its
       // level between the previous event and this one
       drawline( previous_x_for_trace[event.source], previous_y, new_x, previous_y, trace.color)
@@ -269,14 +287,15 @@ show_debug()
 
 main()
 {
-  traces[ SCL].y = 140
+  traces[ SCL].y = 160
   traces[ SCL].color = SCL_COLOR
   traces[ SDA].y = 100
   traces[ SDA].color = SDA_COLOR
 
-  view.width = 350
+  view.width = 400
 
-  draw_menubar("Capture", "Measure", "", "Quit")
+  //draw_menubar("Capture", "Measure", "", "Quit")
+  draw_menubar("Capture", "", "", "Quit")
 
   // Begin sampling when there is a falling edge on the SDA line ( which is
   // part of a Start Condition, the other part begin that SCL is high)
