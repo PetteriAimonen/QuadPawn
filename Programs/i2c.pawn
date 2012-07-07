@@ -1,0 +1,322 @@
+
+#include <console>
+
+
+const NUM_SAMPLES = 800
+const trace_height = 20 // pixels
+const LOW = 0
+const HIGH = 1
+const SCL = 0
+const SDA = 1
+const EvType: { NIL = 0, START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION }
+
+const Color: orange = RGB( 0xee, 0x66, 0x22)
+
+const Color: SCL_COLOR = yellow
+const Color: SDA_COLOR = cyan
+const Color: TEXT_COLOR = orange
+
+
+new  sampling_rate = 400000
+new  bool: should_render
+
+
+
+// This data *could* be packed into a 32-bit cell to save memory but it would
+// make the code harder to read and make no impact on the 2x 4096 byte sample
+// buffers.
+//
+#define Event [
+          .when_happened, // index in to sample buffers
+          .source, // SCL or SDA
+          .new_level, // LOW or HIGH
+  EvType: .type, // START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION
+]
+
+new  events[ 64][ Event]
+new  num_events
+
+
+// An oscilliscope trace ( either of SCL or SDA)
+//
+#define Trace [
+  // Row within the view at which the logic 0 level for this trace is drawn
+         .y,
+  // The color in which this trace is drawn
+  Color: .color,
+]
+
+new  traces[ 2][Trace]
+
+
+// This the view of the part of the trace that is visible.
+//
+#define View [
+  // .from is an index in to the captured sample arrays.  The time that they
+  // correspond to ( relative to the beginning of the capture) depends on the
+  // sampling rate:
+  //    time = i / sampling_rate
+  //  ..so index 5 at a sampling rate of 100 kHz is
+  //    5 / 100000 = 0.00005 or 50 ns
+  .from,
+  // The number of indices across the view
+  .span,
+  // The ( index of the) first event that influences the view
+  .first_event,
+  // The number of columns of pixels across the view
+  .width,
+]
+
+new  view[ View]
+
+
+capture()
+{
+  new  samples[ 2]{NUM_SAMPLES}
+
+  wavein_start()
+
+  // Show an animation to indicate that the device is waiting for a trigger
+  new  frame = 0
+  new  spinner{} = "/-\\I"
+  new  text{} = ""
+  while ( ! wavein_istriggered() )
+  {
+    text{0} = spinner{frame}
+    draw_text( text, (screenwidth - fontwidth), 0, TEXT_COLOR, black)
+    frame = ( frame + 1) & 0x3;
+    delay_ms( 100);
+  }
+  draw_text(" ", (screenwidth - fontwidth), 0, TEXT_COLOR, black)
+
+  wavein_read( {0}, {0}, samples[SCL], samples[SDA])
+
+  analyze( samples)
+
+  view.from = 0
+  view.span = 399
+  view.first_event = 0
+
+  should_render = true
+}
+
+
+analyze( samples[]{})
+{
+  num_events = 0
+  new  previous_level_of_line[] = [ -1, -1]
+  // Go through the whole capture buffer
+  for ( new t = 0;  t < NUM_SAMPLES;  t += 1)
+  {
+    // Go through both channels ( lines / sources of events)
+    for ( new  line = SCL;  line <= SDA;  line += 1)
+    {
+      new  level = samples[ line]{ t}
+      if ( level != previous_level_of_line[ line]  &&  num_events < sizeof events)
+      {
+        events[num_events].when_happened = t
+        events[num_events].source = line
+        events[num_events].new_level = level
+        num_events += 1
+        // event.type // TODO: Detect onditions, 0, 1, etc
+        previous_level_of_line[ line] = level
+      }
+    }
+  }
+}
+
+
+// Provide the pixel column within the view that corresponds to the specified
+// point in time.  Column 0 corresponds to view.from and column 399 corresponds
+// to view.to.
+//
+x_within_view_for( time)
+{
+  // Work out the time relative to the time in the leftmost column of pixels in
+  // the view
+  new  rel_time = time - view.from
+  return (view.width - 1) * rel_time / view.span
+}
+
+
+y_within_view_for( trace[Trace], level)
+{
+  return trace.y + trace_height * level
+}
+
+
+// Renders the display
+//
+render()
+{
+  // Event: S, P, 0, 1 ( these all correspond to a single point in time)
+  // Macro event: Address (7-bit), TxType(W/R), byte (8-bit) or ACK bit (A/N)
+  //    Address and byte cover a span of time ( multiple events)
+
+  // indexes in time require 12 bits.  The remaining 20 bits can be used to encode stuff
+
+  // There is only a single sequence of events that is used to render both SCL
+  // and SDA since events such as a Start Condition depend upon the state of
+  // both lines
+
+  // If both SCL and SDA change at the same time ( indicating the sampling rate
+  // is too low, but still) then this is encoded as two consecutive events
+  // related to the same point in time
+
+  // Zoom: Don't zoom out so far that the 8 pixel-wide single-character
+  // explanations of events overlap
+
+  // Blank out the previous render of the traces:
+  for ( new  t = 0;  t < sizeof traces;  t += 1)
+  {
+    fill_rectangle( 0, traces[t].y, view.width, trace_height + 1, black)
+  }
+
+  // These are X ordinates on the screen of the rendered event just previously
+  new  previous_x_for_trace[] = [ 0, 0]
+  new  previous_y_for_trace[] = [ 0, 0]
+
+  // Go through all of the events that influence the view
+  for ( new  ev = view.first_event;  ;  ev += 1)
+  {
+    new  event[Event]
+    new  trace[Trace]
+
+    if ( num_events <= ev  ||  view.from + view.span < events[ev].when_happened)
+      break
+
+    event = events[ ev]
+    trace = traces[ event.source]
+    new  previous_level = event.new_level ^ 1
+    new  previous_y = y_within_view_for( trace, previous_level)
+    new  new_y =      y_within_view_for( trace, event.new_level)
+    new  new_x = x_within_view_for( event.when_happened)
+
+    if ( view.from < event.when_happened)
+    {
+      // Draw the horizontal line that represents the signal maintaining its
+      // level between the previous event and this one
+      drawline( previous_x_for_trace[event.source], previous_y, new_x, previous_y, trace.color)
+
+      // Draw the line that represents the transition to the new level
+      drawline( new_x, previous_y, new_x, new_y, trace.color)
+    }
+
+    previous_x_for_trace[event.source] = new_x
+    previous_y_for_trace[event.source] = new_y
+  }
+  // Draw the horizontal lines of the signals going off the right-hand-side of the view
+  for ( new  t = 0;  t < sizeof traces;  t += 1)
+  {
+    new  final_y = previous_y_for_trace[ t]
+    drawline( previous_x_for_trace[t], final_y, view.width - 1, final_y, traces[t].color)
+  }
+}
+
+
+set_sampling_rate()
+{
+  sampling_rate = wavein_samplerate( clamp(sampling_rate, 1000, 72000000) )
+
+  new text{200} = "Sampling Rate: "
+  strcat( text, str(sampling_rate / 1000) )
+  strcat( text, " kHz")
+  draw_status( text)
+}
+
+
+scroll_right()
+{
+  view.from += 100
+  if ( NUM_SAMPLES - 1 < view.from + view.span)
+    view.from = NUM_SAMPLES - 1 - view.span
+  while ( events[view.first_event].when_happened < view.from)
+    view.first_event += 1
+  should_render = true
+}
+
+scroll_left()
+{
+  view.from -= 100
+  if ( view.from < 0)
+    view.from = 0
+  while ( 0 < view.first_event  &&  view.from <= events[view.first_event - 1].when_happened)
+    view.first_event -= 1
+  should_render = true
+}
+
+
+increase_samping_rate()
+{
+  sampling_rate *= 2
+  set_sampling_rate()
+}
+
+decrese_sampling_rate()
+{
+  sampling_rate /= 2
+  set_sampling_rate()
+}
+
+
+show_debug()
+{
+  print("events:"); println( str(num_events) )
+  print("view.from:"); println( str(view.from) )
+  print("view.first_event:"); println( str(view.first_event) )
+}
+
+
+main()
+{
+  traces[ SCL].y = 140
+  traces[ SCL].color = SCL_COLOR
+  traces[ SDA].y = 100
+  traces[ SDA].color = SDA_COLOR
+
+  view.width = 350
+
+  draw_menubar("Capture", "Measure", "", "Quit")
+
+  // Begin sampling when there is a falling edge on the SDA line ( which is
+  // part of a Start Condition, the other part begin that SCL is high)
+  wavein_settrigger( Trig_NegEdge, Ch_D)
+
+  set_sampling_rate()
+
+  while (!get_keys(BUTTON4))
+  {
+    if ( get_keys(BUTTON1) )
+    {
+      capture()
+    }
+    else if ( get_keys(BUTTON3) )
+    {
+      show_debug()
+    }
+    else if ( get_keys(SCROLL2_RIGHT) )
+    {
+      scroll_right()
+    }
+    else if ( get_keys(SCROLL2_LEFT) )
+    {
+      scroll_left()
+    }
+    else if ( get_keys(SCROLL1_RIGHT) )
+    {
+      increase_samping_rate()
+    }
+    else if ( get_keys(SCROLL1_LEFT) )
+    {
+      decrese_sampling_rate()
+    }
+
+    if ( should_render)
+    {
+      render()
+      should_render = false
+    }
+    delay_ms( 10);
+  }
+}
+
