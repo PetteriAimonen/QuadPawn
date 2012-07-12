@@ -129,7 +129,7 @@ void __irq__ print_hardfault()
     while(1);
 }
 
-void __attribute__((naked)) HardFaultException()
+void __attribute__((naked, externally_visible)) HardFaultException()
 {
     // Rescue stack pointer and register values
     asm("mrs %0, msp" : "=r"(SP) : :);

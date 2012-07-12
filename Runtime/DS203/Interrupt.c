@@ -6,6 +6,10 @@
 #include "BIOS.h"
 #include <stdint.h>
 
+void NMIException(void) __attribute__((externally_visible));
+void USB_HP_CAN_TX_IRQHandler(void) __attribute__((externally_visible));
+void USB_LP_CAN_RXO_IRQHandler(void) __attribute__((externally_visible));
+
 void NMIException(void)
 {}
 
