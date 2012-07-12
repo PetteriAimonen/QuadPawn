@@ -27,7 +27,8 @@ static uint8_t spi_recv()
     return SPI3->DR;
 }
 
-static void spi_recv_block(uint8_t *buffer, unsigned count)
+static void  __attribute__((optimize("O2")))
+spi_recv_block(uint8_t *buffer, unsigned count)
 {
     while (!(SPI3->SR & SPI_SR_TXE));
     while (SPI3->SR & SPI_SR_BSY); // Wait for previous byte transmission
