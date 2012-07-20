@@ -1,0 +1,70 @@
+/*
+ * This program turns the DSO Quad in to a torch with brightness adjustable
+ * from soft for seeing where your sleeping toddler is without waking them up
+ * to bright for finding your slippers under the bed.
+ */
+
+new brightness
+new should_clear
+
+
+help()
+{
+  fill_rectangle( 0, 0, 400, 240, black)
+  new lines[]{} = [
+    "Button 1 - Keys",
+    "Button 4 - Quit",
+    "Scroll 1 - Fine adjustment",
+    "Scroll 2 - Coarse adjustment"
+  ]
+  for ( new i = 0;  i < sizeof lines;  i += 1)
+  {
+    // 28 = characters in widest line
+    // 6 = character row of first line
+    draw_text( lines[i], (screenwidth - fontwidth*28) / 2, screenheight - fontheight * (6+i) - fontheight)
+  }
+  should_clear = true
+}
+
+
+change_brightness( change)
+{
+  brightness = clamp( brightness + change, 5, 100)
+  set_backlight( brightness)
+  if (should_clear)
+  {
+    fill_rectangle( 0, 0, 400, 240, white)
+    should_clear = false
+  }
+}
+
+
+main()
+{
+  help()
+
+  while (!get_keys(BUTTON4))
+  {
+    if (get_keys(BUTTON1))
+    {
+      help()
+    }
+    else if (get_keys(SCROLL2_RIGHT))
+    {
+      change_brightness(30)
+    }
+    else if (get_keys(SCROLL2_LEFT))
+    {
+      change_brightness(-30)
+    }
+    else if (get_keys(SCROLL1_RIGHT))
+    {
+      change_brightness(5)
+    }
+    else if (get_keys(SCROLL1_LEFT))
+    {
+      change_brightness(-5)
+    }
+  }
+}
+
