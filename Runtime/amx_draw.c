@@ -86,7 +86,7 @@ static cell AMX_NATIVE_CALL amx_putcolumn(AMX *amx, const cell *params)
     DMA2_Channel1->CNDTR = count;
     DMA2_Channel1->CCR = 0x5991;
     
-    if (params[4])
+    if (params[5])
     {
         __LCD_DMA_Ready();
     }
