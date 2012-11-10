@@ -10,7 +10,7 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	amx.o amxexec.o amxaux.o amxpool.o amx_debug.o \
 	amx_draw.o amx_core.o amx_string.o amx_fixed.o amx_wavein.o \
 	amx_waveout.o amx_menu.o amx_file.o amx_buttons.o amx_fourier.o \
-	amx_time.o amx_device.o \
+	amx_time.o amx_device.o amx_fpga.o fpga.o\
 	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o \
 	alterbios.o
 
@@ -43,13 +43,16 @@ endif
 CFLAGS += -mcpu=cortex-m3 -mthumb -mno-thumb-interwork
 
 # Optimization & debug settings
-CFLAGS += -fno-common -Os -ffunction-sections -g -std=gnu99 -DNDEBUG
+CFLAGS += -fno-common -Os -g -std=gnu99 -DNDEBUG
+
+# Link-time optimization
+CFLAGS += -flto
 
 # Compiler warnings
 CFLAGS += -Wall -Werror -Wno-unused
 
 # Default linker arguments (disables GCC-provided startup.c, creates .map file)
-LFLAGS += -nostartfiles -nostdlib -Wl,-Map=build/$(NAME).map -eReset_Handler -Wl,-gc-sections
+LFLAGS += -nostartfiles -nostdlib -fwhole-program -Wl,-Map=build/$(NAME).map -eReset_Handler
 
 # Directory for .o files
 VPATH = build

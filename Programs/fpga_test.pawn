@@ -1,0 +1,7 @@
+#include <fpga>
+#include <console>
+
+main()
+{
+	println(str(fpga_load("V261FPGA.BIN")));
+}

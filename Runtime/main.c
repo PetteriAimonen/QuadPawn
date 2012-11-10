@@ -47,9 +47,8 @@ int amxinit_buttons(AMX *amx);
 int amxinit_fourier(AMX *amx);
 int amxinit_time(AMX *amx);
 int amxinit_device(AMX *amx);
+int amxinit_fpga(AMX *amx);
 int amx_timer_doevents(AMX *amx);
-
-register void *stack_pointer asm("sp");
 
 #define AMX_ERR_ABORT 100
 #define AMX_ERR_FILE_CHANGED 101
@@ -198,6 +197,7 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_fourier(&amx);
     amxinit_time(&amx);
     amxinit_device(&amx);
+    amxinit_fpga(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);
@@ -375,6 +375,8 @@ int main(void)
                  "Please install it from https://github.com/PetteriAimonen/AlterBIOS", status);
         while (1) show_msgbox("AlterBIOS is required", buf);
     }
+    
+    get_keys(ALL_KEYS); // Clear key buffer
     
     while (true)
     {

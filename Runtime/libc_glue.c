@@ -6,12 +6,12 @@
 
 #include "stm32f10x.h"
 
-size_t _fread(void *ptr, size_t size, FILE *stream)
+size_t __attribute__((externally_visible)) _fread(void *ptr, size_t size, FILE *stream)
 {
     return 0;
 }
 
-size_t _fwrite(const void *ptr, size_t size, FILE *stream)
+size_t __attribute__((externally_visible)) _fwrite(const void *ptr, size_t size, FILE *stream)
 {
     static int y = 220;
     static int x = 10;

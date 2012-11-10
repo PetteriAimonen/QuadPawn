@@ -72,7 +72,7 @@ void __Init_Data(void) {
 }
 
 register void *stack_pointer asm("sp");
-void Reset_Handler() __attribute__((noreturn, naked));
+void Reset_Handler() __attribute__((noreturn, naked, externally_visible));
 void Reset_Handler(void) {
     
     /* Initialize data and bss */
