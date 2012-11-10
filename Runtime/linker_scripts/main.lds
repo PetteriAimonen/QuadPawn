@@ -27,6 +27,10 @@ SECTIONS
     .bios 0x08004200 (NOLOAD) : {
       build/BIOS.o
     }
+    
+    .alterbios 0x08044000 (NOLOAD) : {
+      build/alterbios.o
+    }
 
     .text : {
       _vectors = .;

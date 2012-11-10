@@ -10,6 +10,7 @@
 #include "stm32f10x.h"
 #include "ds203_io.h"
 #include "Interrupt.h"
+#include "alterbios.h"
 #include "ff.h"
 
 #include "menubar.h"
@@ -19,6 +20,7 @@
 #include "msgbox.h"
 #include "amx_debug.h"
 #include "amx_menu.h"
+
 
 // For some reason, the headers don't have this register
 #define FSMC_BTR1   (*((vu32 *)(0xA0000000+0x04)))
@@ -365,14 +367,13 @@ int main(void)
     __Set(ADC_CTRL, EN);       
     __Set(ADC_MODE, SEPARATE);
     
-    FRESULT status = f_mount(0, &fatfs);
-    while (status != FR_OK)
+    int status = alterbios_check();
+    if (status < 0)
     {
         char buf[100];
-        snprintf(buf, sizeof(buf), "Failed to open the FAT12 filesystem: "
-                 "f_mount returned %d", status);
-        show_msgbox("Filesystem error", buf);
-        status = f_mount(0, &fatfs);
+        snprintf(buf, sizeof(buf), "AlterBIOS not found or too old: %d\n"
+                 "Please install it from https://github.com/PetteriAimonen/AlterBIOS", status);
+        while (1) show_msgbox("AlterBIOS is required", buf);
     }
     
     while (true)

@@ -1,11 +1,11 @@
 /*---------------------------------------------------------------------------/
-/  FatFs - FAT file system module include file  R0.09     (C)ChaN, 2011
+/  FatFs - FAT file system module include file  R0.09a    (C)ChaN, 2012
 /----------------------------------------------------------------------------/
 / FatFs module is a generic FAT file system module for small embedded systems.
 / This is a free software that opened for education, research and commercial
-/ developments under license policy of following trems.
+/ developments under license policy of following terms.
 /
-/  Copyright (C) 2011, ChaN, all right reserved.
+/  Copyright (C) 2012, ChaN, all right reserved.
 /
 / * The FatFs module is a free software and there is NO WARRANTY.
 / * No restriction on use. You can use, modify and redistribute it for
@@ -15,7 +15,7 @@
 /----------------------------------------------------------------------------*/
 
 #ifndef _FATFS
-#define _FATFS	6502	/* Revision ID */
+#define _FATFS	4004	/* Revision ID */
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,9 +41,9 @@ extern PARTITION VolToPart[];	/* Volume - Partition resolution table */
 #define LD2PD(vol) (VolToPart[vol].pd)	/* Get physical drive number */
 #define LD2PT(vol) (VolToPart[vol].pt)	/* Get partition index */
 
-#else						/* Single partition configuration */
-#define LD2PD(vol) (vol)	/* Each logical drive is bound to the same physical drive number */
-#define LD2PT(vol) 0		/* Always mounts the 1st partition or in SFD */
+#else							/* Single partition configuration */
+#define LD2PD(vol) (BYTE)(vol)	/* Each logical drive is bound to the same physical drive number */
+#define LD2PT(vol) 0			/* Always mounts the 1st partition or in SFD */
 
 #endif
 
@@ -111,24 +111,24 @@ typedef struct {
 /* File object structure (FIL) */
 
 typedef struct {
-	FATFS*	fs;				/* Pointer to the owner file system object */
-	WORD	id;				/* Owner file system mount ID */
+	FATFS*	fs;				/* Pointer to the related file system object */
+	WORD	id;				/* File system mount ID of the related file system object */
 	BYTE	flag;			/* File status flags */
 	BYTE	pad1;
-	DWORD	fptr;			/* File read/write pointer (0 on file open) */
+	DWORD	fptr;			/* File read/write pointer (0ed on file open) */
 	DWORD	fsize;			/* File size */
-	DWORD	sclust;			/* File start cluster (0 when fsize==0) */
-	DWORD	clust;			/* Current cluster */
-	DWORD	dsect;			/* Current data sector */
+	DWORD	sclust;			/* File data start cluster (0:no data cluster, always 0 when fsize is 0) */
+	DWORD	clust;			/* Current cluster of fpter */
+	DWORD	dsect;			/* Current data sector of fpter */
 #if !_FS_READONLY
 	DWORD	dir_sect;		/* Sector containing the directory entry */
-	BYTE*	dir_ptr;		/* Ponter to the directory entry in the window */
+	BYTE*	dir_ptr;		/* Pointer to the directory entry in the window */
 #endif
 #if _USE_FASTSEEK
 	DWORD*	cltbl;			/* Pointer to the cluster link map table (null on file open) */
 #endif
-#if _FS_SHARE
-	UINT	lockid;			/* File lock ID (index of file semaphore table) */
+#if _FS_LOCK
+	UINT	lockid;			/* File lock ID (index of file semaphore table Files[]) */
 #endif
 #if !_FS_TINY
 	BYTE	buf[_MAX_SS];	/* File data read/write buffer */
@@ -176,14 +176,14 @@ typedef struct {
 
 typedef enum {
 	FR_OK = 0,				/* (0) Succeeded */
-	FR_DISK_ERR,			/* (1) A hard error occured in the low level disk I/O layer */
+	FR_DISK_ERR,			/* (1) A hard error occurred in the low level disk I/O layer */
 	FR_INT_ERR,				/* (2) Assertion failed */
 	FR_NOT_READY,			/* (3) The physical drive cannot work */
 	FR_NO_FILE,				/* (4) Could not find the file */
 	FR_NO_PATH,				/* (5) Could not find the path */
 	FR_INVALID_NAME,		/* (6) The path name format is invalid */
-	FR_DENIED,				/* (7) Acces denied due to prohibited access or directory full */
-	FR_EXIST,				/* (8) Acces denied due to prohibited access */
+	FR_DENIED,				/* (7) Access denied due to prohibited access or directory full */
+	FR_EXIST,				/* (8) Access denied due to prohibited access */
 	FR_INVALID_OBJECT,		/* (9) The file/directory object is invalid */
 	FR_WRITE_PROTECTED,		/* (10) The physical drive is write protected */
 	FR_INVALID_DRIVE,		/* (11) The logical drive number is invalid */
@@ -191,7 +191,7 @@ typedef enum {
 	FR_NO_FILESYSTEM,		/* (13) There is no valid FAT volume */
 	FR_MKFS_ABORTED,		/* (14) The f_mkfs() aborted due to any parameter error */
 	FR_TIMEOUT,				/* (15) Could not get a grant to access the volume within defined period */
-	FR_LOCKED,				/* (16) The operation is rejected according to the file shareing policy */
+	FR_LOCKED,				/* (16) The operation is rejected according to the file sharing policy */
 	FR_NOT_ENOUGH_CORE,		/* (17) LFN working buffer could not be allocated */
 	FR_TOO_MANY_OPEN_FILES,	/* (18) Number of open files > _FS_SHARE */
 	FR_INVALID_PARAMETER	/* (19) Given parameter is invalid */
@@ -216,8 +216,8 @@ FRESULT f_truncate (FIL*);							/* Truncate file */
 FRESULT f_sync (FIL*);								/* Flush cached data of a writing file */
 FRESULT f_unlink (const TCHAR*);					/* Delete an existing file or directory */
 FRESULT	f_mkdir (const TCHAR*);						/* Create a new directory */
-FRESULT f_chmod (const TCHAR*, BYTE, BYTE);			/* Change attriburte of the file/dir */
-FRESULT f_utime (const TCHAR*, const FILINFO*);		/* Change timestamp of the file/dir */
+FRESULT f_chmod (const TCHAR*, BYTE, BYTE);			/* Change attribute of the file/dir */
+FRESULT f_utime (const TCHAR*, const FILINFO*);		/* Change times-tamp of the file/dir */
 FRESULT f_rename (const TCHAR*, const TCHAR*);		/* Rename/Move a file or directory */
 FRESULT f_chdrive (BYTE);							/* Change current drive */
 FRESULT f_chdir (const TCHAR*);						/* Change current directory */
@@ -239,8 +239,7 @@ TCHAR* f_gets (TCHAR*, int, FIL*);					/* Get a string from the file */
 #define EOF (-1)
 #endif
 
-/* Flush buffers to refresh any changes made to the filesystem by host computer through USB. */
-void f_flush(FATFS *fs);
+
 
 
 /*--------------------------------------------------------------*/
@@ -330,6 +329,9 @@ int ff_del_syncobj (_SYNC_t);		/* Delete a sync object */
 #define	ST_WORD(ptr,val)	*(BYTE*)(ptr)=(BYTE)(val); *((BYTE*)(ptr)+1)=(BYTE)((WORD)(val)>>8)
 #define	ST_DWORD(ptr,val)	*(BYTE*)(ptr)=(BYTE)(val); *((BYTE*)(ptr)+1)=(BYTE)((WORD)(val)>>8); *((BYTE*)(ptr)+2)=(BYTE)((DWORD)(val)>>16); *((BYTE*)(ptr)+3)=(BYTE)((DWORD)(val)>>24)
 #endif
+
+/* Hackish function to deal with DSO Quad's simultaneous filesystem access. */
+void f_flush(FATFS *fs);
 
 #ifdef __cplusplus
 }
