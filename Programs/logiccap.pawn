@@ -1,0 +1,238 @@
+#include <fpga>
+#include <console>
+
+#define FPGA_IMAGE "LOGIC.FPG"
+
+/// Set the contents of the LOGIC.FPG FPGA configuration register
+fpga_set_config(value)
+{
+    new buffer[1];
+    buffer[0] = value;
+    fpga_write(buffer);
+}
+
+fpga_reset()
+{
+    // PB1 is our reset pin, toggle it low to reset the FPGA
+    fpga_config_outputs(PB1);
+    fpga_clear_pin(PB1);
+    fpga_set_pin(PB1);
+}
+
+bool: fpga_initialize()
+{
+    while (!f_exists(FPGA_IMAGE))
+    {
+        if (show_dialog("Please copy " ... FPGA_IMAGE ... " to the USB drive.",
+            "OK", "", "", "Exit") == 3)
+        {
+            return false;
+        }
+    }
+
+    if (!fpga_load(FPGA_IMAGE))
+    {
+        show_msgbox("Failed to load " ... FPGA_IMAGE ... " to the FPGA!");
+        return false;
+    }
+    
+    // Configure FPGA clock at 72 MHz
+    wavein_samplerate(72000000);
+    
+    // Capture logic for channels A & B expects 200mV range.
+    config_chA(ADC_DC, ADC_200mV, .offset = 0);
+    config_chB(ADC_DC, ADC_200mV, .offset = 0);
+    
+    fpga_reset();
+    
+    return true;
+}
+
+write_sample(File: file, timestamp_high, timestamp_low, levels)
+{
+    // Line format is:
+    // #0000000000000 0A 0B 0C 0D
+    
+    new linebuf{64} = "#";
+    new valbuf{16};
+    
+    // Write the timestamp in two parts because Pawn can't process
+    // 64 bit integers.
+    valstr(valbuf, timestamp_high);
+    strcat(linebuf, valbuf);
+    valstr(valbuf, timestamp_low, .minlength = 9);
+    strcat(linebuf, valbuf);
+    
+    // Write the channels
+    strcat(linebuf, " ");
+    strcat(linebuf, (levels & 1) ? "1A " : "0A ");
+    strcat(linebuf, (levels & 2) ? "1B " : "0B ");
+    strcat(linebuf, (levels & 4) ? "1C " : "0C ");
+    strcat(linebuf, (levels & 8) ? "1D " : "0D ");
+    
+    // Write the line to file
+    strcat(linebuf, "\r\n");
+    f_write(file, linebuf);
+}
+
+new recv_buffer[256];
+
+do_capture()
+{
+    println("");
+    println("Starting new capture");
+    
+    new filename{14} = "WAVES%03d.VCD";
+    select_filename(filename);
+    
+    println(strjoin("Writing to ", filename));
+    
+    new File: file = f_open(filename, FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(file,
+        "$version DSO Quad Logic Capture $end\r\n" ...
+        "$timescale 13888ps $end\r\n" ...
+        "$scope module logic $end\r\n" ...
+        "$var wire 1 A ChannelA $end\r\n" ...
+        "$var wire 1 B ChannelB $end\r\n" ...
+        "$var wire 1 C ChannelC $end\r\n" ...
+        "$var wire 1 D ChannelD $end\r\n" ...
+        "$upscope $end\r\n" ...
+        "$enddefinitions $end\r\n" ...
+        "$dumpvars 0A 0B 0C 0D $end\r\n"
+    );
+    
+    fpga_reset();
+    
+    // Main data processing loop
+    new timestamp_high = 0, timestamp_low = 0;
+    new samples = 0;
+    new prev_levels = -1;
+    new bool: overrun = false;
+    while (!peek_keys(ANY_KEY))
+    {
+        // First read the amount of available data
+        fpga_set_config(0x0001);
+        fpga_read(recv_buffer, 1);
+        new count = recv_buffer[0];
+        
+        // Wait for data
+        if (count == 0)
+            continue;
+        
+        if (count >= 4095 && !overrun)
+        {
+            overrun = true;
+            println("Overrun - some samples were lost!");
+        }
+        
+        // Don't read more than what fits in our buffer
+        if (count > sizeof recv_buffer)
+            count = sizeof recv_buffer;
+        
+        // Get the data into our buffer
+        fpga_set_config(0x0000);
+        fpga_read(recv_buffer, count);
+        
+        if (prev_levels < 0)
+            prev_levels = recv_buffer[0] & 0x0F;
+        
+        // Then process the data
+        // Each value is: 0xTTTL  where TTT is the time from previous event
+        // and L is the new input levels.
+        for (new i = 0; i < count; i++)
+        {
+            timestamp_low += (recv_buffer[i] >> 4) + 1;
+            new levels = recv_buffer[i] & 0x0F;
+            
+            if (timestamp_low >= 1000000000)
+            {
+                timestamp_high += 1;
+                timestamp_low -= 1000000000;
+            }
+            
+            if (levels == prev_levels)
+                continue;
+            
+            samples += 1;
+            prev_levels = levels;
+            
+            write_sample(file, timestamp_high, timestamp_low, levels);
+        }
+    }
+    
+    samples += 1;
+    write_sample(file, timestamp_high, timestamp_low, prev_levels);
+    
+    println(strjoin("Wrote a total of ", str(samples), " samples."));
+    
+    if (!f_close(file))
+        println("File writing failed.");
+}
+
+main()
+{
+    if (!fpga_initialize())
+        return;
+    
+    println("FPGA configured successfully.");
+    println("Ready to capture 4 channels at 72 MSps.");
+    
+    // Test signal, 100 kHz.
+    waveout_digital(100000);
+    
+    get_keys(ANY_KEY);
+        
+    while (!get_keys(BUTTON4))
+    {
+        get_keys(ANY_KEY); // Clear key buffer
+        draw_menubar("Start", "", "", "Exit");
+
+        while (!peek_keys(ANY_KEY))
+        {
+            delay_ms(100);
+        }
+        
+        if (get_keys(BUTTON1))
+        {
+            draw_menubar("Stop", "", "", "Exit");
+            do_capture();
+        }
+    }
+}
+
+new const program_icon[] = [
+    0b0000000000000000000000000000000,
+    0b0001111110000111111000011111100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b1111000011111100001111110000111,
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+    
+    0b0001100001100011111001111110000,
+    0b0001100001100111111001111111000,
+    0b0001100001101100000001100001100,
+    0b0001100001101100000001100001100,
+    0b0000110011001100000001100001100,
+    0b0000110011001100000001100001100,
+    0b0000011110000111111001111111000,
+    0b0000001100000011111001111110000,
+    
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+    0b0001111110000111111000011111100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b0001000010000100001000010000100,
+    0b1111000011111100001111110000111,
+    0b0000000000000000000000000000000,
+];
+
+new const program_name{} = "Logic Capture";
+
+#include <metadata>

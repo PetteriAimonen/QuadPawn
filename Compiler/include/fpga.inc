@@ -4,8 +4,8 @@
 const fpgapin:
 {
     PB0     = 0x0001, // FPGA pin 63, GBIN
-    PB1     = 0x0002, // FPGA pin 60
-    PB2     = 0x0004, // FPGA pin 62, GBIN
+    PB1     = 0x0002, // FPGA pin 62, GBIN
+    PB2     = 0x0004, // FPGA pin 60
     PA2     = 0x0008, // FPGA pin 72
     PA3     = 0x0010, // FPGA pin 71
     PA5     = 0x0020, // FPGA pin 69
@@ -14,6 +14,7 @@ const fpgapin:
     PC4     = 0x0100, // FPGA pin 65
     PC5     = 0x0200, // FPGA pin 64
     
+    NO_PINS =  0x0000,
     ALL_PINS = 0xFFFF
 }
 
@@ -39,12 +40,23 @@ native fpgapin: fpga_read_pins(fpgapin: mask = ALL_PINS);
 /// other pins will keep their old values.
 native fpga_write_pins(fpgapin: states, fpgapin: mask = ALL_PINS);
 
+/// Set a single pin
+stock fpga_set_pin(fpgapin: pin)
+{
+    fpga_write_pins(pin, pin);
+}
+
+/// Clear a single pin
+stock fpga_clear_pin(fpgapin: pin)
+{
+    fpga_write_pins(NO_PINS, pin);
+}
+
 /// Read data from FPGA using the parallel bus. The data is transferred as
 /// 16 bit values.
 native fpga_read(dest[], count = sizeof dest);
 
 /// Write data to FPGA using the parallel bus.
 native fpga_write(const data[], count = sizeof data);
-
 
 
