@@ -52,30 +52,28 @@ write_sample(File: file, timestamp_high, timestamp_low, levels)
 {
     // Line format is:
     // #0000000000000 0A 0B 0C 0D
-    
-    new linebuf{64} = "#";
     new valbuf{16};
     
     // Write the timestamp in two parts because Pawn can't process
     // 64 bit integers.
+    f_write(file, "#");
     valstr(valbuf, timestamp_high);
-    strcat(linebuf, valbuf);
+    f_write(file, valbuf);
+    
     valstr(valbuf, timestamp_low, .minlength = 9);
-    strcat(linebuf, valbuf);
+    f_write(file, valbuf);
     
     // Write the channels
-    strcat(linebuf, " ");
-    strcat(linebuf, (levels & 1) ? "1A " : "0A ");
-    strcat(linebuf, (levels & 2) ? "1B " : "0B ");
-    strcat(linebuf, (levels & 4) ? "1C " : "0C ");
-    strcat(linebuf, (levels & 8) ? "1D " : "0D ");
+    f_write(file, " ");
+    f_write(file, (levels & 1) ? "1A " : "0A ");
+    f_write(file, (levels & 2) ? "1B " : "0B ");
+    f_write(file, (levels & 4) ? "1C " : "0C ");
+    f_write(file, (levels & 8) ? "1D " : "0D ");
     
-    // Write the line to file
-    strcat(linebuf, "\r\n");
-    f_write(file, linebuf);
+    f_write(file, "\r\n");
 }
 
-new recv_buffer[256];
+new recv_buffer[4096];
 
 do_capture()
 {
@@ -106,7 +104,7 @@ do_capture()
     // Main data processing loop
     new timestamp_high = 0, timestamp_low = 0;
     new samples = 0;
-    new prev_levels = -1;
+    new prev_levels = 0;
     new bool: overrun = false;
     while (!peek_keys(ANY_KEY))
     {
@@ -133,16 +131,24 @@ do_capture()
         fpga_set_config(0x0000);
         fpga_read(recv_buffer, count);
         
-        if (prev_levels < 0)
-            prev_levels = recv_buffer[0] & 0x0F;
-        
         // Then process the data
-        // Each value is: 0xTTTL  where TTT is the time from previous event
-        // and L is the new input levels.
+        // If top bit is 0 then value is: 0xTTTL
+        //   where TTT is the time from previous event
+        //   and L is the new input levels.
+        // If top bit is 1 then value is: 0xTTTT
+        //   where TTTT is time / 2048.
         for (new i = 0; i < count; i++)
         {
-            timestamp_low += (recv_buffer[i] >> 4) + 1;
-            new levels = recv_buffer[i] & 0x0F;
+            new levels = prev_levels;
+            if (recv_buffer[i] & 0x8000)
+            {
+                timestamp_low += (recv_buffer[i] & 0x7FFF) * 2048;
+            }
+            else
+            {
+                timestamp_low += (recv_buffer[i] >> 4) + 1;
+                levels = recv_buffer[i] & 0x0F;
+            }
             
             if (timestamp_low >= 1000000000)
             {
@@ -150,13 +156,13 @@ do_capture()
                 timestamp_low -= 1000000000;
             }
             
-            if (levels == prev_levels)
-                continue;
-            
-            samples += 1;
-            prev_levels = levels;
-            
-            write_sample(file, timestamp_high, timestamp_low, levels);
+            if (levels != prev_levels)
+            {
+                samples += 1;
+                prev_levels = levels;
+                
+                write_sample(file, timestamp_high, timestamp_low, levels);
+            }
         }
     }
     
