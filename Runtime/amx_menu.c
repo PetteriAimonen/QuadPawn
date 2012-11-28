@@ -49,7 +49,7 @@ int amx_menu_doevents(AMX *amx)
         if (status != 0) return status;
     }
     
-    if (b3_func != -1 && get_keys(BUTTON4))
+    if (b4_func != -1 && get_keys(BUTTON4))
     {
         status = amx_Exec(amx, &retval, b4_func);
         if (status != 0) return status;
