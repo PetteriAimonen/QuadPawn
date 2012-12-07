@@ -21,12 +21,10 @@
 #include "amx_debug.h"
 #include "amx_menu.h"
 
-
 // For some reason, the headers don't have this register
 #define FSMC_BTR1   (*((vu32 *)(0xA0000000+0x04)))
 #define FSMC_BTR2   (*((vu32 *)(0xA0000008+0x04)))
 
-FATFS fatfs;
 AMX amx;
 FIL amx_file;
 char amx_filename[20];
@@ -49,6 +47,7 @@ int amxinit_time(AMX *amx);
 int amxinit_device(AMX *amx);
 int amxinit_fpga(AMX *amx);
 int amx_timer_doevents(AMX *amx);
+void overlay_init(AMX *amx, const char *filename, FIL *file);
 
 #define AMX_ERR_ABORT 100
 #define AMX_ERR_FILE_CHANGED 101
@@ -89,38 +88,6 @@ void TimerTick()
             __Set(BEEP_VOLUME, 0);
         }
     }
-}
-
-int overlay_callback(AMX *amx, int index)
-{
-    FIL *file = &amx_file;
-    AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
-    AMX_OVERLAYINFO *tbl = (AMX_OVERLAYINFO*)(amx->base + hdr->overlays);
-    
-    amx->codesize = tbl[index].size;
-    amx->code = amx_poolfind(index);
-    if (amx->code == NULL)
-    {
-        // Have to load from disc
-        if ((amx->code = amx_poolalloc(tbl[index].size, index)) == NULL)
-            return AMX_ERR_OVERLAY;   /* failure allocating memory for the overlay */
-        
-        // Verify that the file has not changed
-        f_flush(&fatfs);
-        FILINFO file2;
-        f_stat(amx_filename, &file2);
-        if (file2.fsize != file->fsize)
-            return AMX_ERR_FILE_CHANGED;
-        
-        f_lseek(file, hdr->cod + tbl[index].offset);
-        unsigned count;
-        f_read(file, amx->code, tbl[index].size, &count);
-        if (count != tbl[index].size)
-            return AMX_ERR_FORMAT;
-        
-        return VerifyPcode(amx);
-    }
-    return AMX_ERR_NONE;
 }
 
 // Copied from amx.c
@@ -168,8 +135,9 @@ int loadprogram(const char *filename, char *error, size_t error_size)
         unsigned static_size = (hdr.stp - hdr.dat) + hdr.cod;
         amx_poolinit(vm_data + static_size, sizeof(vm_data) - static_size);
         
+        amx.base = vm_data;
         amx.data = vm_data + hdr.cod;
-        amx.overlay = overlay_callback;
+        overlay_init(&amx, amx_filename, &amx_file);
     }
     else
     {
@@ -385,7 +353,6 @@ int main(void)
         get_keys(ANY_KEY);
         __Clear_Screen(0);
         
-        f_flush(&fatfs);
         char error[50] = {0};
         int status = loadprogram(amx_filename, error, sizeof(error));
         if (status != 0)
@@ -394,7 +361,7 @@ int main(void)
             snprintf(buffer, sizeof(buffer),
                      "Loading of program %s failed:\n\n"
                      "Error %d: %s\n\n"
-                     "%s\n", amx_filename, status, aux_StrError(status), error);
+                     "%s\n", amx_filename, status, my_aux_StrError(status), error);
             printf(buffer);
             printf(amx_filename);
             show_msgbox("Program load failed", buffer);

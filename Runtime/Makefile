@@ -12,7 +12,7 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	amx_waveout.o amx_menu.o amx_file.o amx_buttons.o amx_fourier.o \
 	amx_time.o amx_device.o amx_fpga.o fpga.o\
 	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o \
-	alterbios.o
+	alterbios.o amx_overlays.o
 
 COMMITID := $(shell git describe --always || echo unknown)
 
