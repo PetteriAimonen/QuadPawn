@@ -1,0 +1,232 @@
+#include <graph>
+#include <fourier>
+#include <config>
+
+new inbuf{2048};
+new Fixed: real_fft[2048];
+new Fixed: imag_fft[2048];
+new transform_len = 2048;
+new speedup = 1;
+new margin = 40;
+static samplerate;
+
+// Capture one column worth of data and scroll the screen.
+bool: @idle()
+{
+    // Start the capture
+    wavein_start();
+
+    // Scroll everything leftwards
+    copy_area(speedup, 0, screenwidth - margin - speedup, 220, 0, 0);
+    
+    // Read the data and draw new column
+    wavein_read(inbuf);
+    
+    fft(inbuf, real_fft, imag_fft, transform_len);
+    
+    new Color: column[220];
+
+    for (new i = 0; i < 220; i++)
+    {
+        // We only use the lowest 220 values of the FFT, skipping
+        // index 0 (DC value). Frequency at each y coordinate is:
+        // f = (y + 1) * samplerate / transform_len. Frequency scale is linear.
+        new Fixed: value = cabs(real_fft[i + 1], imag_fft[i + 1]);
+        
+        // Simple palette: low values are dark blue, high values are bright red-orange
+        new intval = abs(fround(4 * value));
+        new r = min(255, 4 * intval);
+        new g = min(255, intval);
+        new b = max(0, min(255 - 2 * intval, intval * 16));
+        column[i] = RGB(r, g, b);
+    }
+    
+    for (new i = speedup; i > 0; i--)
+    {
+        putcolumn(screenwidth - margin - i, 0, column);
+    }
+    
+    return !get_keys(BUTTON4);
+}
+
+@button2()
+{
+    new filename{14} = "SGRAM%03d.BMP";
+    select_filename(filename);
+    if (save_bitmap(filename))
+        draw_menubar(strjoin("Saved ", filename));
+    else
+        draw_menubar("Bitmap save failed!");
+    
+    delay_ms(500);
+    draw_menubar("", "Save", "Config", "Quit");
+}
+
+@button3()
+{
+    configure();
+    draw_freq_scale();
+}
+
+main()
+{
+    configure(true);
+    draw_freq_scale();
+}
+
+//////////////////////////////
+// Drawing of frequency scale
+
+draw_freq_scale()
+{
+    clear_screen();
+    draw_menubar("", "Save", "Config", "Quit");
+    
+    new maxfreq = 221 * samplerate / transform_len;
+    new minfreq = 1 * samplerate / transform_len;
+    new step = (maxfreq - minfreq) / 15;
+    new div = 0;
+    new unit{4};
+    if (step < 100)
+    {
+        step = 100;
+        div = 1;
+        unit = "Hz";
+    }
+    else if (step < 1000)
+    {
+        step = 1000;
+        div = 1000;
+        unit = "kHz";
+    }
+    else if (step < 10000)
+    {
+        step = 10000;
+        div = 1000;
+        unit = "kHz";
+    }
+    else if (step < 100000)
+    {
+        step = 100000;
+        div = 1000;
+        unit = "kHz";
+    }
+    else if (step < 1000000)
+    {
+        step = 1000000;
+        div = 1000000;
+        unit = "MHz"
+    }
+    else
+    {
+        step = 2000000;
+        div = 1000000;
+        unit = "MHz"
+    }
+    
+    draw_text(unit, screenwidth - margin, 0);
+    
+    minfreq -= minfreq % step;
+    for (new f = minfreq; f < maxfreq; f += step)
+    {
+        new y = f / 100 * transform_len / (samplerate / 100) + 1;
+        if (y < 20 || y > 220)
+            continue;
+        
+        new buf{12};
+        buf = str(f / div);
+        strpad(buf, 3);
+        
+        draw_text(buf, screenwidth - margin, y - fontheight / 2);
+    }
+}
+
+/////////////////////////////
+// Configuration
+
+// Maximum shown frequency is 221 * samplerate / 2048 in 'slow' ranges
+// and 221 * samplerate / 1024 in 'fast' ranges.
+new samplerate_idx;
+new samplerate_labels[]{} = ["1kHz (10kSps)",
+                             "5kHz (50kSps)",
+                             "20kHz (200kSps)",
+                             "100kHz (1MSps)",
+                             "1MHz (10MSps)",
+                             "15MHz (72MSps)"];
+new samplerates[] = [10000, 50000, 200000, 1000000, 10000000, 72000000];
+new transform_lengths[] = [2048, 2048, 2048, 2048, 2048, 1024];  
+
+new input_range;
+
+new bool: output_signal;
+
+configure(bool: load_only = false)
+{
+    start_config("specgram.ini", load_only);
+    while (do_config())
+    {
+        config_multichoice("samplerate", "Frequency range", samplerate_idx, samplerate_labels, 1,
+            .help = "Select the frequency range you are interested in. This determines the samplerate of the inputs and also the display Y scale."
+        );
+        
+        config_multichoice("input_range", "Voltage range", input_range, adc_range_names, 2,
+            .help = "Select the voltage range to use. These are the same names as used elsewhere in DSO Quad. Actual input range peak-to-peak is 10x the range name."
+        );
+        
+        config_integer("speed", "Speed",
+                       speedup, 1, 1, 5,
+            .help = "This speeds up the scrolling of the display by multiplying columns. It may help to see faster changes, but doesn't increase resolution.");
+        
+        config_boolean("output", "Test signal on WaveOut", output_signal, false,
+            .help = "If enabled, a square wave signal is given on wave out connector. The frequency will be samplerate / 20."
+        );
+    }
+    
+    if (output_signal)
+    {
+        waveout_digital(samplerates[samplerate_idx] / 20);
+    }
+    else
+    {
+        waveout_voltage(0);
+    }
+    
+    config_chA(ADC_AC, ADCRange: input_range);
+    wavein_settrigger(Trig_Always);
+    
+    samplerate = samplerates[samplerate_idx];
+    wavein_samplerate(samplerate);
+    
+    transform_len = transform_lengths[samplerate_idx];
+}
+    
+//////////////////////////////
+// Metadata
+
+new const program_icon[] = [
+    0b11110011100000000000000000000000,
+    0b11111000000010010010000000000000,
+    0b11110011100000000000000000000000,
+    0b11111000000100100100000000000000,
+    0b11110011100000000000000000000001,
+    0b11111000000010010010000000000111,
+    0b11110011100000000000000000001100,
+    0b11111000000100000001111100011000,
+    0b11110011100000000111111111000000,
+    0b11111000000000001100000001100000,
+    0b11110011100000011000001100110000,
+    0b11111000000010110011111000011000,
+    0b11110011100000000011110000001100,
+    0b11111000000100100100000000000111,
+    0b11110011100000000000000000000001,
+    0b11111000000010010010000000000000,
+    0b11110011100000000000000000000000,
+    0b11111000000100100100000000000000,
+    0b11110011100000000000000000000000,
+    0b11111000000000000000000000000000,
+    0b11111111111111111111111111111111,
+];
+new const program_name{} = "Spectrogram";
+#include <metadata>
+
+    
