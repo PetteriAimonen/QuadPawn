@@ -46,7 +46,7 @@ CFLAGS += -mcpu=cortex-m3 -mthumb -mno-thumb-interwork
 CFLAGS += -fno-common -Os -g -std=gnu99 -DNDEBUG
 
 # Link-time optimization
-CFLAGS += -flto
+#CFLAGS += -flto
 
 # Compiler warnings
 CFLAGS += -Wall -Werror -Wno-unused
