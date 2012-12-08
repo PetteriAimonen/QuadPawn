@@ -82,8 +82,8 @@ draw_freq_scale()
     clear_screen();
     draw_menubar("", "Save", "Config", "Quit");
     
-    new maxfreq = 221 * samplerate / transform_len;
-    new minfreq = 1 * samplerate / transform_len;
+    new maxfreq = 221 * (samplerate / transform_len);
+    new minfreq = samplerate / transform_len;
     new step = (maxfreq - minfreq) / 15;
     new div = 0;
     new unit{4};
