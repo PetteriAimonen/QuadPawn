@@ -428,7 +428,7 @@ amx_exec_run:
     @ r1  = ALT
     @ r2  = STP (stack top), relocated (absolute address)
     @ r3  = HEA, relocated (absolute address)
-    @ r4  = CIP./pawncc -d2 -v2 signlgen.p
+    @ r4  = CIP
     @ r5  = data section (passed in r2)
     @ r6  = STK, relocated (absolute address)
     @ r7  = FRM, relocated (absolute address)
