@@ -24,7 +24,8 @@ static AMX_OVERLAYINFO *overlay_tbl;
 static AMX_HEADER *amx_hdr;
 
 // Inner (slow) part of overlay callback
-static int overlay_callback_full(AMX *amx, int index)
+static int __attribute__((noinline))
+overlay_callback_full(AMX *amx, int index)
 {
     // Check the full overlay pool
     amx->codesize = overlay_tbl[index].size;
@@ -83,10 +84,10 @@ overlay_callback(AMX *amx, int index)
         return AMX_ERR_NONE;
     }
     
-    cacheentry->index = index;
     int ret = overlay_callback_full(amx, index);
     
     // Update cache entry
+    cacheentry->index = index;
     cacheentry->code = amx->code;
     cacheentry->size = amx->codesize;
     
