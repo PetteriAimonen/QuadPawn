@@ -6,7 +6,7 @@
 #include "fpga.h"
 
 #define PINS_COUNT 10
-struct {
+static const struct {
     uint32_t amxpin; // Pin mask used by PAWN code
     GPIO_TypeDef* port; // Pin port used by hardware
     int portpin; // Pin bit used by hardware

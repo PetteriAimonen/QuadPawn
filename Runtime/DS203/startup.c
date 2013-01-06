@@ -81,6 +81,11 @@ void Reset_Handler(void) {
     __Init_Data();
     __USB_Init();
     
+    /* Set stack bottom to marker value */
+    *(uint32_t*)0x2000b800 = 0xDEADBEEF;
+    *(uint32_t*)0x2000b804 = 0xDEADBEEF;
+    *(uint32_t*)0x2000b808 = 0xDEADBEEF;
+    
     main();
     while(1) {}
 }
