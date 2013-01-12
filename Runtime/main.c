@@ -335,6 +335,7 @@ int main(void)
     __Set(ADC_CTRL, EN);       
     __Set(ADC_MODE, SEPARATE);
     
+    alterbios_init();
     int status = alterbios_check();
     if (status < 0)
     {

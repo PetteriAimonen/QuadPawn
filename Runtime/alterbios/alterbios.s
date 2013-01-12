@@ -11,6 +11,11 @@
 	. = 0x00000000
 alterbios_version_tag:
 
+	.globl alterbios_init
+	.thumb_func
+	. = 0x00000005
+alterbios_init:
+
 	.globl patch_GetDev_SN
 	.thumb_func
 	. = 0x00000015

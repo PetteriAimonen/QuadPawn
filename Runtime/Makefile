@@ -67,7 +67,9 @@ clean:
 	$(RM) $(NAME).HEX build/*
 
 $(NAME).HEX: build/$(NAME).elf
-	$(CP) -O ihex $< $@
+	$(CP) -O ihex $< build/temp.hex
+	head -n -1 build/temp.hex > $(NAME).HEX
+	cat alterbios/ALTBIOS.HEX >> $(NAME).HEX
 
 baselibc/libc.a: baselibc/Makefile
 	make -C baselibc

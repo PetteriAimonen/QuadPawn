@@ -119,9 +119,10 @@ stock bool:do_config()
 {
     static max_index;
     
-    if (selected_index != old_selected_index && config_state == config_edit)
+    if ((selected_index != old_selected_index && config_state == config_edit)
+        || config_state == config_help)
     {
-        if (has_help)
+        if (has_help || config_state == config_help)
             draw_menubar("OK", "Cancel", "", "Help");
         else
             draw_menubar("OK", "Cancel", "", "");
