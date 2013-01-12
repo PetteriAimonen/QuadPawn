@@ -243,6 +243,8 @@ unsigned amxdbg_get_caller(AMX *amx, unsigned *frame)
     
     *frame = dat[frm] - (cell)dat;
     
+    if (*frame > amx->stp) return 0; // Guard against corrupted stack
+    
     return addr;
 }
 
