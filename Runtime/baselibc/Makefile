@@ -3,7 +3,7 @@ CFLAGS  = -fno-common -Os -g -Wall -Werror -I include
 # Platform specific settings
 CC      = arm-none-eabi-gcc
 AR      = arm-none-eabi-ar
-CFLAGS += -mcpu=cortex-m3 -mthumb -flto
+CFLAGS += -mcpu=cortex-m3 -mthumb
 
 ifdef windir
 RM = del
