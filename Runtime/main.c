@@ -335,7 +335,6 @@ int main(void)
     __Set(ADC_CTRL, EN);       
     __Set(ADC_MODE, SEPARATE);
     
-    alterbios_init();
     int status = alterbios_check();
     if (status < 0)
     {
@@ -344,6 +343,7 @@ int main(void)
                  "Please install it from https://github.com/PetteriAimonen/AlterBIOS", status);
         while (1) show_msgbox("AlterBIOS is required", buf);
     }
+    alterbios_init();
     
     get_keys(ALL_KEYS); // Clear key buffer
     
