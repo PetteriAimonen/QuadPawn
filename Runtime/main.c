@@ -47,6 +47,10 @@ int amxinit_time(AMX *amx);
 int amxinit_device(AMX *amx);
 int amxinit_fpga(AMX *amx);
 int amx_timer_doevents(AMX *amx);
+//cf usart test
+int amxinit_usart(AMX *amx);
+
+
 void overlay_init(AMX *amx, const char *filename, FIL *file);
 
 #define AMX_ERR_ABORT 100
@@ -166,6 +170,8 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_time(&amx);
     amxinit_device(&amx);
     amxinit_fpga(&amx);
+    //cf
+    amxinit_usart(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);
@@ -325,8 +331,7 @@ int main(void)
     USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
     gpio_usart1_tx_mode(GPIO_AFOUT_10);
     gpio_usart1_rx_mode(GPIO_HIGHZ_INPUT);
-    printf("\nBoot!\n");
-    
+    printf("\nBoot! (cf)\n");
     // Reduce the wait states of the FPGA & LCD interface
     // It works for me, hopefully it works for you too :)
     FSMC_BTR1 = 0x10100110;
@@ -347,6 +352,8 @@ int main(void)
     
     get_keys(ALL_KEYS); // Clear key buffer
     
+    //show_msgbox("CF", "Hello World");
+
     while (true)
     {
         select_file(amx_filename);
