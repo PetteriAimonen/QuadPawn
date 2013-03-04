@@ -59,7 +59,7 @@ static cell AMX_NATIVE_CALL amx_usart_read(AMX *amx, const cell *params){
   //from f_read:
   // Swap the bytes in each cell to convert into Pawn packed string
   cell* p = (cell*)params[1];
-  for (int i = 0; i <= params[2]; i++, p++)
+  for (int i = 0; i < params[2]; i++, p++)
   {
       *p = __builtin_bswap32(*p);
   }
