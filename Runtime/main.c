@@ -47,6 +47,10 @@ int amxinit_time(AMX *amx);
 int amxinit_device(AMX *amx);
 int amxinit_fpga(AMX *amx);
 int amx_timer_doevents(AMX *amx);
+//cf usart test
+int amxinit_usart(AMX *amx);
+
+
 void overlay_init(AMX *amx, const char *filename, FIL *file);
 
 #define AMX_ERR_ABORT 100
@@ -166,6 +170,8 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_time(&amx);
     amxinit_device(&amx);
     amxinit_fpga(&amx);
+    //cf
+    amxinit_usart(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);
@@ -322,11 +328,13 @@ int main(void)
     // USART1 8N1 115200bps debug port
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
     USART1->BRR = 72000000 / 115200;
-    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE;
     gpio_usart1_tx_mode(GPIO_AFOUT_10);
     gpio_usart1_rx_mode(GPIO_HIGHZ_INPUT);
-    printf("\nBoot!\n");
+    NVIC_EnableIRQ(USART1_IRQn);
+    NVIC_SetPriority(USART1_IRQn, 14); 
     
+    printf("\nBoot! (cf3)\r\n");
     // Reduce the wait states of the FPGA & LCD interface
     // It works for me, hopefully it works for you too :)
     FSMC_BTR1 = 0x10100110;
@@ -347,6 +355,8 @@ int main(void)
     
     get_keys(ALL_KEYS); // Clear key buffer
     
+    //show_msgbox("CF", "Hello World");
+
     while (true)
     {
         select_file(amx_filename);

@@ -12,12 +12,13 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 	amx_waveout.o amx_menu.o amx_file.o amx_buttons.o amx_fourier.o \
 	amx_time.o amx_device.o amx_fpga.o fpga.o\
 	fix16.o fix16_sqrt.o fix16_trig.o fix16_exp.o \
-	alterbios.o amx_overlays.o
+	alterbios.o amx_overlays.o amx_usart.o
 
 COMMITID := $(shell git describe --always || echo unknown)
 
 # Linker script (choose which application position to use)
-LFLAGS  = -L linker_scripts -T app4.lds
+#cf i've used 3 to test and not overwrite official app
+LFLAGS  = -L linker_scripts -T app3.lds 
 
 # Any libraries to include
 LIBS = -lm -lgcc baselibc/libc.a
