@@ -328,10 +328,13 @@ int main(void)
     // USART1 8N1 115200bps debug port
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
     USART1->BRR = 72000000 / 115200;
-    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+    USART1->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE;
     gpio_usart1_tx_mode(GPIO_AFOUT_10);
     gpio_usart1_rx_mode(GPIO_HIGHZ_INPUT);
-    printf("\nBoot! (cf)\n");
+    NVIC_EnableIRQ(USART1_IRQn);
+    NVIC_SetPriority(USART1_IRQn, 14); 
+    
+    printf("\nBoot! (cf3)\r\n");
     // Reduce the wait states of the FPGA & LCD interface
     // It works for me, hopefully it works for you too :)
     FSMC_BTR1 = 0x10100110;

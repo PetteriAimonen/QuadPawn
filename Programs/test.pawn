@@ -18,9 +18,10 @@
 // include folder.
 #include <calibration>
 #include <console>
+#include <usart>
 
-native write_usart( const str{});
 //native printf(...);
+
 // All PAWN programs start with the main function. Optionally, you can also
 // use an event-driven approach where the program keeps running after main()
 // exits. However, that is not needed for this simple application.
@@ -28,9 +29,11 @@ main()
 {
     // Having labels for button actions at the top of the screen greatly
     // improves the usability. It does take 20 pixels of space, though.
-    write_usart("Write test ok!");
-
+    usart_write("write!\r\n");
+   
+      
     clear_screen();
+    
     draw_menubar("Reset", "", "", "Quit");
     
     // Let's then draw the constant texts - these stay in the same place
@@ -121,6 +124,21 @@ main()
             minA = minB = fix16_max;
             maxA = maxB = fix16_min;
         }
+	new msg{20}="Cnt:";
+	new dat{20};
+	new cnt=0;
+	cnt=usart_read(dat);
+	if(cnt > 0){
+	  strcat(msg,strf(cnt,0));
+	  strcat(msg," [");
+	  strcat(msg,dat);
+	  strcat(msg,"]\r\n");
+	  usart_write(msg);
+	}else{
+	  //write_usart("NoRx\n");
+	} 
+	
+
     }
 }
 
@@ -194,6 +212,7 @@ print_voltages(xpos, Color: fg, Fixed: now, Fixed: minval, Fixed: maxval)
 ///
 /// The program icon is completely optional, if you leave it out a default
 /// icon will be used.
+
 new const program_icon[] = [
     0b0011111111111111111111111111100,
     0b0111111110000001000001111111110,
@@ -223,7 +242,7 @@ new const program_icon[] = [
 
 /// By default, the name of the program is the name of the file, voltmetr.amx.
 /// Here we can specify a nicer name, that can be longer and contain spaces.
-new const program_name{} = "Volt meter";
+new const program_name{} = "Usart 5";
 
 /// The metadata module marks the program icon and name for inclusion in the
 /// binary. You must specify the icon and/or name first, and then include
