@@ -1,0 +1,528 @@
+/** This is a simple voltage meter application, implemented in PAWN for the
+ * DSO Quad portable oscilloscope. It is intended as a demo for the PAWN
+ * functionality and usage. Another purpose is to test the calibration
+ * accuracy.
+ *
+ * The application measures voltage from channels A and B, and displays them
+ * on screen. It also keeps track of the maximum and minimum voltage seen in
+ * each channel.
+ */
+
+// Most common modules are listed in default.inc, and therefore they are
+// included automatically. Some such modules are buttons, dialog, draw,
+// file, fixed, menu, string, wavein and waveout. However, the calibration
+// module takes some RAM space and therefore it is included only on demand.
+// You can find the module source code and documentation comments in the
+// include folder.
+#include <calibration>
+#include <console>
+#include <graph>
+//#include <float> is not available!
+
+// These configure the ADC timebase.
+// The samplerate is set to 5kHz, so that when we average 100 samples any 50Hz noise
+// goes away. USA residents might want to use 6kHz = 6000 Hz instead.
+const sampleCount = 100;
+// Attention: Summing up of more than 128 samples in range 0...255 may cause overflow at 32767!
+const captureFrequHz = 5000;
+
+// Names used for indexes:
+const ValNames: {rms = 0, avg, minPeak, minAvg, maxAvg, maxPeak};
+// Array for values of Ch A and Ch B, each with rms ... maxPeak
+static Fixed: val1[2][6];
+
+// Screen Layout: 3 different display layouts are implemented:
+const LayoutNames: {SevenSeg=0, Simple, Wave};
+static iDot[2]; //position of dot in value string in 7 segment display
+
+// All PAWN programs start with the main function. Optionally, you can also
+// use an event-driven approach where the program keeps running after main()
+// exits. However, that is not needed for this simple application.
+main() {
+  new LayoutNames:layout=SevenSeg; //actual layout of screen, initialized with 7 segment
+
+  // Row labels for values:
+  new labels[]{}=["RMS:", "Avg:", "PeakMin", "AvgMin:", "AvgMax:", "PeakMax"];
+
+  // Load calibration.ini. If it is not found, the application will use
+  // default calibration, which is often a bit inaccurate.
+  load_calibration();
+
+  //setup grid to display the wave forms in Layout "Wave":
+  graph_xaxis[.max] = FIX(20.0); //use 20 ms
+  graph_xaxis[.min] = FIX(0.0);
+  graph_xaxis[.major] = FIX(5.0);
+  graph_yaxis[.min] = FIX(-130.0);
+  graph_yaxis[.max] = FIX(130.0);
+  graph_yaxis[.major] = FIX(50.0);
+  graph_x = 230;
+  //graph_y = 40;
+  //graph_h=160;
+  graph_w = 160;
+  const size=5; // for Layout "SevenSeg" font size
+  const y7ChA=30; //y start point for drawing big "7 segment" numbers channel A
+  const y7ChB=y7ChA+17*size; // and channel B
+
+  // Set initial configuration for the channels. Wavein_autorange() will
+  // adjust the range, but these lines sets the inputs to DC mode and
+  // default offset of 128. The channel offset means the ADC value for
+  // 0 voltage. I.e. if you set an offset of 0 here, you couldn't measure
+  // negative voltages.
+  config_chA(ADC_DC, ADC_2V, .offset=128);
+  config_chB(ADC_DC, ADC_2V, .offset=128);
+
+  // For a voltage meter, we want continous trigger, i.e. don't wait for any edge.
+  wavein_settrigger(Trig_Always);
+  wavein_samplerate(captureFrequHz);
+
+  // Initialize the variables used to store minimum and maximum values.
+  // When we initialize them this way (min with fix16_max, max with
+  // fix16_min), the first loop iteration will always overwrite them with
+  // the measured value.
+  // The variables we use there have the tag 'Fixed'. This means they are
+  // a fixed point value, range -32768.00000 to +32767.99998.
+  reset_vals();
+
+  new bool:layoutChg = true; //true initializes screen
+  new yPos=140; //1st line below title
+  new xPos[.ChA, .ChB, .Lab];
+
+  // In the menubar, we said that Button4 would be "Quit". Here we implement
+  // that functionality by checking if BUTTON4 has been pressed and stopping
+  // the loop if it has. Each time a key is pressed, an interrupt routine
+  // sets a flag in a global variable. The flag stays set until someone
+  // calls get_keys() with the given button as the parameter. Calling
+  // get_keys(ANY_KEY) clears all the key flags.
+  while (!get_keys(BUTTON1)) { //Stop
+    //layout change requested?
+    if (get_keys(SCROLL1_PRESS)) {
+      if (layout < Wave)
+       layout++;
+      else layout=SevenSeg;
+      layoutChg = true;
+      }
+    if (get_keys(SCROLL1_RIGHT)) {
+      if (layout < Wave) {
+        layout++;
+        layoutChg = true;
+        }
+      }
+    if (get_keys(SCROLL1_LEFT)) {
+      if (layout > SevenSeg) {
+        layout--;
+        layoutChg = true;
+        }
+      }
+    if (layoutChg) { //changed layout or initial initialization:
+      clear_screen();
+      new buf{10} = "Layout ";
+      strcat(buf, str(_:layout));
+      // Having labels for button actions at the top of the screen greatly
+      // improves the usability. It does take 20 pixels of space, though.
+      if (layout == SevenSeg) draw_menubar("Stop", "", "", "About");
+      else draw_menubar("Stop", "", "Reset", "About"); //does not allow a menu item for scroll1
+      //Workaround:
+      draw_text(buf, 310, 223, .fg = white, .bg=transparent, .center = true);
+      if (layout == Wave || layout == Simple) {
+        if (layout == Simple) { //a lot of space
+          xPos[.ChA]=130;
+          xPos[.ChB]=280;
+          xPos[.Lab]=20;
+          }
+        else { //Wave: with scope picture
+          xPos[.ChA]=70; //more on the left side, on right side place for diagramm required
+          xPos[.ChB]=150;
+          xPos[.Lab]=5;
+          draw_text("ms", 380, 10, .center = true); //diagram x axis label
+          }
+        // Let's then draw the constant texts - these stay in the same place
+        // for the duration of thay layout:
+        draw_text("DSO Quad as Volt Meter", 100, 190, .center = true); //title
+        draw_text("Ch A [V]", xPos[.ChA], yPos+20, .fg = cyan); //column headers
+        draw_text("Ch B [V]", xPos[.ChB], yPos+20, .fg = yellow);
+        new yPos2=yPos;
+        for (new j=0; j< 6; j++) {
+          draw_text(labels[j], xPos[.Lab], yPos2); //with default color white
+          yPos2 -=20; //go down for next line
+          }
+        }
+      else { //SevenSeg: diplay in big characters
+        //no access to other font sizes than normal. Workaround:
+        //Use graphics mode and emulate 7 segment diplays for 0 ... 9:
+        draw_text("Voltmeter by Horst Schmid and Petteri Aimonen", 10, 200, .center = false);
+        draw_text("Ch B", 30, y7ChB+12*size, .fg=yellow, .center = false);
+        draw_text("Ch A", 30, y7ChA+12*size, .fg=cyan, .center = false);
+        iDot[0]=-1;
+        iDot[1]=-2;
+        }
+      layoutChg=false; //mark it as done!
+      }
+    // The autorange functionality measures the minimum and maximum values
+    // from the channels and adjusts the range so that precision is good
+    // but values don't exceed the range.
+    wavein_autorange();
+
+    // This starts the capture, i.e. begins capturing the 4096 samples
+    // that fit in the FPGA sample buffer. They will wait in the buffer
+    // until you read them out.
+    wavein_start();
+    if (layout == Wave) clearGraph(); //and draw grid specified with above parameters
+
+    // Wavein_aggregate reads previously captured samples and calculates
+    // the average (and other statistics) about them. It is merely a
+    // convenience function, you could also call wavein_read() directly
+    // and then calculate the average yourself.
+    // For accurate RMS we should 1st apply the calibration before calculation the square sum.
+    // Therefore wavein_aggregate(...) is replaced by wavein_aggregate_calibrated(...)
+    // putting dots to grid is also included
+    new Fixed: peakPA, Fixed: peakNA, Fixed: peakPB, Fixed: peakNB;
+    //wavein_aggregate(.avgA = val1[Ch_A][.avg], .avgB = val1[Ch_B][.avg], .count = 1000);
+
+    wavein_aggregate_calibrated(.sumA_V = val1[Ch_A][avg], .sumB_V = val1[Ch_B][avg]
+     , .maxA_V = peakPA, .maxB_V = peakPB, .minA_V = peakNA
+     , .minB_V = peakNB, .rmsA_V = val1[Ch_A][rms], .rmsB_V = val1[Ch_B][rms]
+     , .avgA_V = val1[Ch_A][avg], .avgB_V = val1[Ch_B][avg], .count = sampleCount, .layout=layout);
+
+    // Here we update the maximum and minimum values. Note that we update
+    // them from the computed average. The averaging process reduces
+    // noise, but may cause us to miss some short (less than 20ms)
+    // pulses.
+    if (val1[Ch_A][avg] > val1[Ch_A][maxAvg]) val1[Ch_A][maxAvg] = val1[Ch_A][avg];
+    if (val1[Ch_A][avg] < val1[Ch_A][minAvg]) val1[Ch_A][minAvg] = val1[Ch_A][avg];
+    if (val1[Ch_B][avg] > val1[Ch_B][maxAvg]) val1[Ch_B][maxAvg] = val1[Ch_B][avg];
+    if (val1[Ch_B][avg] < val1[Ch_B][minAvg]) val1[Ch_B][minAvg] = val1[Ch_B][avg];
+    if (peakPA > val1[Ch_A][maxPeak]) val1[Ch_A][maxPeak] = peakPA;
+    if (peakNA < val1[Ch_A][minPeak]) val1[Ch_A][minPeak] = peakNA;
+    if (peakPB > val1[Ch_B][maxPeak]) val1[Ch_B][maxPeak] = peakPB;
+    if (peakNB < val1[Ch_B][minPeak]) val1[Ch_B][minPeak] = peakNB;
+
+    // The text drawing is similar for both channels, so it is separated
+    // in a subroutine we can call twice. The parameters simply tell
+    // the X coordinate at which to draw, and the color to use.
+    if ((layout == Wave) || (layout == Simple)) {
+      print_voltages(xPos[.ChA], yPos, cyan, val1[Ch_A]);
+      print_voltages(xPos[.ChB], yPos, yellow, val1[Ch_B]);
+      }
+    if (layout == SevenSeg) {
+      drawNumber7(val1[Ch_A][rms], size, cyan, black, 30, y7ChA, Ch_A);
+      drawNumber7(val1[Ch_B][rms], size, yellow, black, 30, y7ChB, Ch_B);
+      }
+    // Finally, Button1 allows us to reset the maximum and minimum values.
+    if (get_keys(BUTTON3)) reset_vals();
+    if (get_keys(BUTTON4)) { //About
+      new msg{400} = "Quad DSO 203 as Volt meter\n";
+      strcat(msg, "Please be aware: Even if calibrated we have only ");
+      strcat(msg, "an 8 bit DAC. So accuracy is very limited!\n\n");
+      strcat(msg, "Voltmeter was extended by Horst Schmid (www.schmidhorst.de)");
+      strcat(msg, " using Quad PAWN and Voltmeter template from Petteri Aimonen\n");
+      strcat(msg, "https://github.com/PetteriAimonen/QuadPawn");
+      show_msgbox(msg); //clears screen, changes menue without restoring
+      layoutChg=true; //force redrawing
+      }
+    }
+  }
+
+
+stock clearGraph() { //similar to clear_graph, but no labels a y axsis!
+  draw_axes(.xLabels=true, .yLabels=false); //Attention: needs modified *.inc file!
+  new Color: column[240];
+  for (new x = graph_x; x < graph_x + graph_w; x++) {
+    render_graph_column(x, graph_y, column, graph_h);
+    putcolumn(x, graph_y, column, graph_h);
+    }
+  }
+
+// put the number (with 2..3 decimal digits) given via val to the screen
+// xPos, yPos is the lower left corner. Font size size=1, 2, 3, ...
+stock drawNumber7(Fixed:val, size, Color:fg, Color:bg, xPos, yPos, Channel: ch) {
+  // draw or remove plus sign
+  //fill_rectangle(x, y, w, h, Color: color);
+  fill_rectangle(xPos, yPos+7*size, 6*size, 2*size, val>=0 ? fg : bg); // horizontal part
+  fill_rectangle(xPos+2*size, yPos+5*size, 2*size, 6*size, val>=0 ? fg : bg); // horizontal part
+  // draw or remove minus sign
+  fill_rectangle(xPos, yPos+2*size, 6*size, 2*size, val<=0 ? fg : bg); // horizontal part
+  if (val<=0) val=-val;
+  xPos += 7*size;
+  new buf{10};
+  buf=strf(val, digits(val));
+  //draw_text(buf, 350, yPos, .center = true, .bg=black);
+  new i=0;
+  //with the dot the following characters are moved 4*size to the right
+  //the below flicker-free algorithm does not consider that
+  //workaround: if the dot moved: clear all (-> flicker in that case)
+  while (i<strlen(buf)) {
+    if (buf{i}=='.') {
+      if (i != iDot[_:ch]) {//shift of next digit need to clear all further digits
+        fill_rectangle(xPos, yPos, (4*12+4)*size, 14*size, bg); //clear all 4 digits totally
+        }
+      iDot[_:ch]=i;
+      break;
+      }
+    i++;
+    }
+  //now the real drawing of the digits:
+  i=0;
+  while (i<strlen(buf)) {
+    if (buf{i}>='0' && buf{i}<='9') {
+      drawDigit7(buf{i}-48, size, fg, .xPos=xPos, .yPos=yPos);
+      xPos += 12*size; //position for next digit
+      }
+    else if (buf{i}=='.') {
+      fill_rectangle(xPos, yPos, 2*size, 2*size, fg); // draw dot
+      xPos += 4*size; //
+      }
+    i++;
+    }
+  }
+
+// draw one digit as 7 segment number:
+drawDigit7(val, size, Color:fg, Color:bg=black, xPos=0, yPos=0) {
+  //which segment needs to be activated for numbers 0 ... 9:
+  new pat[]=[0b0111111, 0b0011000, 0b1101101, 0b1111100, 0b1011010, 0b1110110, 0b1110111, 0b0011100, 0b1111111, 0b1111110];
+  if (val<0 || val>9) {
+    //draw_text("Error drawDigit7", 100, 190, .center = true);
+    return;
+    }
+  //draw each segment either in fg color (if needed for that value) or bg color (to switch off if not needed)
+  //to clear all and draw the needed segments would flicker a little
+  fill_rectangle(xPos,        yPos,         2*size, 7*size, (pat[val] & 1)==1 ? fg : bg); // segment 0
+  fill_rectangle(xPos,        yPos+7*size,  2*size, 7*size, (pat[val] & 2)==2 ? fg : bg); // segment 1
+  fill_rectangle(xPos+2*size, yPos+12*size, 6*size, 2*size, (pat[val] & 4)==4 ? fg : bg); // segment 2
+  fill_rectangle(xPos+8*size, yPos+7*size,  2*size, 7*size, (pat[val] & 8)==8 ? fg : bg); // segment 3
+  fill_rectangle(xPos+8*size, yPos,         2*size, 7*size, (pat[val] & 0x10)==0x10 ? fg : bg); // segment 4
+  fill_rectangle(xPos+2*size, yPos,         6*size, 2*size, (pat[val] & 0x20)==0x20 ? fg : bg); // segment 5
+  fill_rectangle(xPos+2*size, yPos+6*size,  6*size, 2*size, (pat[val] & 0x40)==0x40 ? fg : bg); // segment 6
+  }
+
+
+/// Figure out a suitable number of decimal digits to use in a value.
+/// For values less than 5 volts, we use 3 digits, and for larger values 2
+/// digits. For large voltages, the measurement is less accurate and therefore
+/// the 3rd decimal would be just random noise so it is better to hide it.
+stock digits(Fixed: value) {
+  if (absf(value) > FIX(20.0)) return 1;
+  return (absf(value) > FIX(2.0)) ? 2 : 3;
+  }
+
+
+// reset the min and max values:
+reset_vals() {
+  val1[Ch_A][minAvg] = fix16_max;
+  val1[Ch_B][minAvg] = fix16_max;
+  val1[Ch_A][maxAvg] = fix16_min;
+  val1[Ch_B][maxAvg] = fix16_min;
+  val1[Ch_A][minPeak] = fix16_max;
+  val1[Ch_A][maxPeak] = fix16_min;
+  val1[Ch_B][minPeak] = fix16_max;
+  val1[Ch_B][maxPeak] = fix16_min;
+  }
+
+/// This is the subroutine that prints the voltages on screen. Instead of
+/// clearing the screen in between, it just draws the text over at the same
+/// position. That avoids some flicker that would be caused by clearing the
+/// screen first.
+
+//print_voltages(xpos, ypos, Color: fg, Fixed: now, Fixed: rms, Fixed: minPeak, Fixed: minAvg, Fixed: maxAvg, Fixed: maxPeak) {
+
+print_voltages(xpos, ypos, Color: fg, Fixed:val[6]) {
+  // Memory in PAWN must be allocated statically, there is no malloc().
+  // This has some implications for string processing, as we must reserve
+  // large enough buffer for the string we want to create. Here the voltages
+  // are strings like "-3.001", so 6 characters should be enough. The last
+  // array entry in a string is always a 0 terminator, just like in C. Minimum length 7!
+  //
+  // Another point is the use of {}-array for strings and other 8-bit
+  // values. This saves some memory compared to a []-array, which has 32-bit
+  // entries. All other variables in PAWN are always 32-bit.
+  new buf{10}; //a little more than really needed
+
+  for(new i=0; i< 6; i++) { //we have 6 different values: rms, avg, ...
+    // Format the current voltage to string. strf() is a function that
+    // converts a fixed point value into string. The second parameter gives
+    // the number of digits after the decimal point.
+    buf = strf(val[i], digits(val[i]));
+    //strcat(buf, " V"); //Append Unit
+    // We pad the string from left by spaces, so that it is exactly 8 bytes
+    // long. This aligns the values nicely on the screen.
+    strpad(buf, 8);
+    draw_text(buf, xpos, ypos, .fg = fg, .bg = black);
+    ypos -=20; //move position for the next value
+    }
+  }
+
+
+/// Get the digitized values 0 ... 255 from the ADC, put them as dot to the grid
+/// Compute the maximum, minimum and sum of the wavein value
+/// over the samples for channels A and B.
+/// For corrrect square sum we need to apply 1st the offset (y-position) and calibration
+/// For the other values we can 1st calculate average and sum (as integer) and then convert to fixed
+/// You have to call wavein_start() before calling this function.
+wavein_aggregate_calibrated(&Fixed:sumA_V = FIX(0.0), &Fixed: sumB_V = FIX(0.0)
+ , &Fixed: maxA_V = FIX(0.0), &Fixed: maxB_V = FIX(0.0), &Fixed: minA_V = FIX(0.0)
+ , &Fixed: minB_V = FIX(0.0), &Fixed: rmsA_V = FIX(0.0), &Fixed: rmsB_V = FIX(0.0)
+ , &Fixed: avgA_V = FIX(0.0), &Fixed: avgB_V = FIX(0.0), count = 100, LayoutNames:layout)
+ {
+  new bufA{2*sampleCount}, bufB{2*sampleCount}; //for the diagramm we need up to 2*sampleCount
+  // to move the displayed part for a stable trigger
+
+  new maxA = cellmin;
+  new maxB = cellmin;
+  new minA = cellmax;
+  new minB = cellmax;
+  rmsA_V = FIX(0.0);
+  rmsB_V = FIX(0.0);
+
+  new j = 0;
+  new sumA=0;
+  new sumB=0;
+  new maxA2=0; //ChA max in this capture
+  new maxB2=0; //ChB max in this capture
+  new minA2=256;
+  new minB2=256;
+  new Fixed:sqsumA = FIX(0.0);
+  new Fixed:sqsumB = FIX(0.0);
+  new Fixed:biasA, Fixed:biasB
+  new xMax=fround(fmul(FIX(0.02), captureFrequHz)); //with 5kHz draw e.g. 100 dots for 20ms
+  new Fixed: scaleX = fdiv(graph_w, xMax);
+  new Fixed: scaleYG = fdiv(graph_h, FIX(256.0));
+  new Fixed: scaleYA, Fixed: scaleYB; //scale (=Range)
+  new Fixed:chAA=FIX(0.0), Fixed:chBA=FIX(0.0); //calibrated amplitude Ch A and B
+
+  wavein_read(bufA, bufB); //get the capture points
+  get_calibration(Ch_A, biasA, scaleYA); // scale about 2.xx (10V/div)... about 500 (50mV/div),
+  get_calibration(Ch_B, biasB, scaleYB); // bias is here always about 128
+
+  while (j < count) {
+    sumA += bufA{j};  //Attention: suming up more than 128 samples may cause overflow!
+    sumB += bufB{j};  //we can apply calibration afterwards
+    if (bufA{j} > maxA2) maxA2 = bufA{j}; //get min and max from actual capture
+    if (bufB{j} > maxB2) maxB2 = bufB{j};
+    if (bufA{j} < minA2) minA2 = bufA{j};
+    if (bufB{j} < minB2) minB2 = bufB{j};
+    // for RMS (root mean square) we need a few actions:
+    // 1.: To avoid overflow at 32767, for 100 samples chAA*chAA needs to be <327 each ==> chA_V<18!
+    // 2.: Calculation of the square from uncalibrated values makes no sense ==> for each of the
+    //     e.g. 100 samples we first need to apply at least the offset calibration.
+    // Due to the limited range of fixed values, we are applying the scale calibration at the end!
+    chAA=FIX(0.1)*(bufA{j}-biasA); //chAA = 0.0 ... about 12.8
+    chBA=FIX(0.1)*(bufB{j}-biasB);
+    sqsumA += fmul(chAA, chAA); //Ch A amplitude up to 100 times (0.1*128)², up to 16384.0!
+    sqsumB += fmul(chBA, chBA);
+    j++;
+    }
+  if (maxA2 > maxA) maxA = maxA2; //update max since last reset
+  if (maxB2 > maxB) maxB = maxB2;
+  if (minA2 < minA) minA = minA2;
+  if (minB2 < minB) minB = minB2;
+
+  if (layout == Wave) {
+    //find start point for graphics from the higher signal of both channels
+    //to use the max value of digitized points is a little instable for sinus, totally instable for saure
+    //Solution: use a point at the slope
+    j=0;
+    maxA2=(maxA2+minA2)/2+(maxA2-minA2)/4;
+    maxB2=(maxB2+minB2)/2+(maxB2-minB2)/4;
+    new aj1=256, aj2=256;
+    new bj1=256, bj2=256;
+    while (j < count) {
+      if (maxA2>=maxB2) {
+        if ((bufA{j} > maxA2) //actual point is bigger than reference
+         && (aj1<bufA{j}) && aj2<bufA{j}) break; // and we have a positive slope
+        }
+      else if ((bufB{j} > maxB2) && (bj1<bufB{j}) && (bj2<bufB{j})) break;
+      aj2=aj1;
+      aj1=bufA{j};
+      bj2=bj1;
+      bj1=bufB{j};
+      j++;
+      }
+    for(new i=j; i<j+xMax; i++) {
+      putpixel(graph_x+fround(fmul(i-j, scaleX)), fround((bufA{i}-128)*scaleYG)+graph_y+graph_h/2, cyan);
+      putpixel(graph_x+fround(fmul(i-j, scaleX)), fround((bufB{i}-128)*scaleYG)+graph_y+graph_h/2, yellow);
+      }
+    }
+  avgA_V = get_voltage(Ch_A, (Fixed:sumA) / (Fixed:count));
+  avgB_V = get_voltage(Ch_B, (Fixed:sumB) / (Fixed:count));
+  maxA_V = get_voltage(Ch_A, maxA);
+  maxB_V = get_voltage(Ch_B, maxB);
+  minA_V = get_voltage(Ch_A, minA);
+  minB_V = get_voltage(Ch_B, minB);
+
+/*
+  new buf{10};
+  buf = strf(chAA);
+  strpad(buf, 8);
+  draw_text("chXA:", 0, 0, .fg = white, .bg = black);
+  draw_text(buf, 60, 0, .fg = cyan, .bg = black);
+
+  buf = strf(chBA);
+  strpad(buf, 8);
+  draw_text(buf, 200, 0, .fg = yellow, .bg = black);
+
+  buf = strf(biasA);
+  strpad(buf, 8);
+  draw_text("Bias:", 0, 20, .fg = white, .bg = black);
+  draw_text(buf, 60, 20, .fg = cyan, .bg = black);
+  buf = strf(biasB);
+  strpad(buf, 8);
+  draw_text(buf, 200, 20, .fg = yellow, .bg = black);
+*/
+
+  // now take square root and apply the scale:
+  rmsA_V = sqrt(FIX(100.0)/count)*sqrt(sqsumA)/scaleYA; // *100 to compensate the 0.1*0.1 to avoid overflow in sqsum
+  rmsB_V = sqrt(FIX(100.0)/count)*sqrt(sqsumB)/scaleYB;
+  }
+
+/// Convert a measured value from ADC to calibrated voltage.
+// Attention: If there was no explicit call to load_calibration(), then default values are used!
+stock Fixed: getVoltage(Channel: channel, Fixed:value) {
+  new Fixed: bias, Fixed: scale;
+  get_calibration(channel, bias, scale); //scale = 2 (10V/div)... 500 (50mV/div)
+                                         //bias is here always about 128
+  return (value - bias) / scale;
+  }
+
+/// The program list has support for displaying an icon. The icon is specified
+/// here as a constant array, and will be compiled into the program. Maximum
+/// size is 32 by 32 pixels, monochrome. It is quite easy to edit with a text
+/// editor. Another way is to save to .xpm format from The Gimp, which is a
+/// similar format and needs just a bit of search & replace to convert.
+///
+/// The program icon is completely optional, if you leave it out a default
+/// icon will be used.
+new const program_icon[] = [
+    0b0011111111111111111111111111100,
+    0b0111111110000001000001111111110,
+    0b1111110010000001000001001111111,
+    0b1111100001000000000010000011111,
+    0b1111100000000000000000000011111,
+    0b1110010000000000000000000100111,
+    0b1110000000000100010000000000111,
+    0b1100000000000100010000000100011,
+    0b1110000000000100010000001000111,
+    0b1101000000000010100000010001011,
+    0b1000000000000010100000100000001,
+    0b1000000000000001000001000000001,
+    0b1000000000000000000010000000001,
+    0b1000000000000000000100000000001,
+    0b1000000000000000001000000000001,
+    0b1000000000000000010000000000001,
+    0b1000000000000000100000000000001,
+    0b1100000000000011100000000000011,
+    0b1110000000000111110000000000111,
+    0b1111111111111111111111111111111,
+    0b1111111111111111111111111111111,
+    0b1111111111111111111111111111111,
+    0b0111111111111111111111111111110,
+    0b0011111111111111111111111111100,
+];
+
+/// By default, the name of the program is the name of the file, voltmetr.amx.
+/// Here we can specify a nicer name, that can be longer and contain spaces.
+new const program_name{} = "Advanced Voltmeter";
+
+/// The metadata module marks the program icon and name for inclusion in the
+/// binary. You must specify the icon and/or name first, and then include
+/// the module.
+#include <metadata>
+
