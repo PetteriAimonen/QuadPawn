@@ -534,7 +534,7 @@ wavein_aggregate_calibrated(Fixed: val0[2][4], count = 100) {
       //     e.g. 100 samples we first need to apply at least the offset calibration.
       // Due to the limited range of fixed values, we are applying the scale calibration at the end!
       ampl=FIX(0.1)*(buf[ch]{j}-bias); //chAA = 0.0 ... about 12.8
-      sqsum += fmul(ampl, ampl); // amplitude up to 100 times (0.1*128)Â², up to 16384.0!
+      sqsum += fmul(ampl, ampl); // amplitude up to 100 times (0.1*128)², up to 16384.0!
       j++;
       } // while j
     val0[_:ch][avg] = get_voltage(ch, fixed(sum)/fixed(count));
