@@ -2,7 +2,8 @@
 #include <console>
 
 
-const NUM_SAMPLES = 800
+const NUM_SAMPLES = 1600
+const MAX_EVENTS = 128
 const trace_height = 20 // pixels
 const LOW = 0
 const HIGH = 1
@@ -35,7 +36,7 @@ new  bool: should_render
   EvType: .type, // START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION
 ]
 
-new  events[ 64][ Event]
+new  events[ MAX_EVENTS][ Event]
 new  num_events
 
 
@@ -295,7 +296,7 @@ main()
   view.width = 400
 
   //draw_menubar("Capture", "Measure", "", "Quit")
-  draw_menubar("Capture", "", "", "Quit")
+  draw_menubar("Capture", "Scrshot", "", "Quit")
 
   // Begin sampling when there is a falling edge on the SDA line ( which is
   // part of a Start Condition, the other part begin that SCL is high)
@@ -308,6 +309,16 @@ main()
     if ( get_keys(BUTTON1) )
     {
       capture()
+    }
+    else if ( get_keys(BUTTON2) )
+    {
+      new filename{14} = "SSHOT%03d.BMP";
+      select_filename(filename);
+
+      if (save_bitmap(filename))
+          draw_status(strjoin("Saved ", filename));
+      else
+          draw_status("Bitmap save failed!");
     }
     else if ( get_keys(BUTTON3) )
     {
