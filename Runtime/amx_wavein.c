@@ -124,12 +124,9 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
             
             while (DMA2_Channel4->CNDTR != 1);
             
-            int threshold = (TIM7->ARR + 1) / 2;
-            
             __disable_irq();
             while (DMA2_Channel4->CNDTR != 1);
             while (DMA2_Channel4->CNDTR == 1);
-            while (TIM7->CNT < threshold);
             GPIOB->BRR = 2;
             __enable_irq();
         }
@@ -140,16 +137,17 @@ static cell AMX_NATIVE_CALL amx_wavein_start(AMX *amx, const cell *params)
             // CLRW pin when TIM4 overflows.
             GPIOB->BSRR = 2;
             TIM4->DIER = 0;
+            TIM4->CCR2 = 0;
             
             uint32_t val = 2;
             DMA1_Channel4->CCR = 0;
+            DMA1->IFCR = DMA_IFCR_CTCIF4;
             DMA1_Channel4->CNDTR = 1;
             DMA1_Channel4->CPAR = (uint32_t)&GPIOB->BRR;
             DMA1_Channel4->CMAR = (uint32_t)&val;
             DMA1_Channel4->CCR = 0x3A11;
-            DMA1->IFCR = DMA_IFCR_CTCIF4;
-            
-            TIM4->CR2 = 0; //(TIM4->CR1 + 1) / 2;
+
+            __sync_synchronize();
             
             TIM4->DIER = TIM_DIER_CC2DE;
             

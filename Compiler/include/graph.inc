@@ -181,57 +181,66 @@ static Color: y_column[240];
 
 /// Draws the tickmarks and borders for the graph.
 /// You probably want to clear the screen before calling this.
-stock draw_axes()
+stock draw_axes(bool: xLabels=true, bool: yLabels=true, bool: y2Labels=true)
 {
     memset(_:y_column, _:graph_bg);
     
-    // X axis ticks
-    for (new Fixed: x = first_major(graph_xaxis); x <= graph_xaxis[.max]; x += graph_xaxis[.major])
+    if (xLabels)
     {
-        new label{12};
-        label = get_ticklabel(x, graph_xaxis[.log]);
-        
-        new xpix = fround(graph_getx(x));
-        xpix -= strlen(label) * fontwidth / 2;
-        
-        draw_text(label, xpix, graph_y - fontheight, graph_xaxis[.tickcolor]);
-    }
-    
-    // Y axis ticks
-    for (new Fixed: y = first_major(graph_yaxis); y <= graph_yaxis[.max]; y += graph_yaxis[.major])
-    {
-        new label{12};
-        label = get_ticklabel(y, graph_yaxis[.log]);
-        
-        new xpos = graph_x - strlen(label) * fontwidth - 5;
-        new ypix = fround(graph_gety(y));
-        y_column[ypix] = graph_major_grid_color;
-        ypix -= fontheight / 2;
-
-        draw_text(label, xpos, ypix, graph_yaxis[.tickcolor]);
-        
-        // Draw minor gridlines
-        new Fixed: increment = graph_yaxis[.major] / graph_yaxis[.minor];
-        for (new i = 0; i < graph_yaxis[.minor]; i++)
+        // X axis ticks
+        for (new Fixed: x = first_major(graph_xaxis); x <= graph_xaxis[.max]; x += graph_xaxis[.major])
         {
-            ypix = fround(graph_gety(y + i * increment));
-            if (y_column[ypix] == graph_bg)
-                y_column[ypix] = graph_minor_grid_color;
+            new label{12};
+            label = get_ticklabel(x, graph_xaxis[.log]);
+            
+            new xpix = fround(graph_getx(x));
+            xpix -= strlen(label) * fontwidth / 2;
+            
+            draw_text(label, xpix, graph_y - fontheight, graph_xaxis[.tickcolor]);
         }
     }
     
-    // Y2 axis ticks
-    if (graph_y2axis[.min] != graph_y2axis[.max])
+    if (yLabels)
     {
-        for (new Fixed: y = first_major(graph_y2axis); y <= graph_y2axis[.max]; y += graph_y2axis[.major])
+        // Y axis ticks
+        for (new Fixed: y = first_major(graph_yaxis); y <= graph_yaxis[.max]; y += graph_yaxis[.major])
         {
             new label{12};
-            label = get_ticklabel(y, graph_y2axis[.log]);
+            label = get_ticklabel(y, graph_yaxis[.log]);
             
-            new ypix = fround(graph_gety2(y));
+            new xpos = graph_x - strlen(label) * fontwidth - 5;
+            new ypix = fround(graph_gety(y));
+            y_column[ypix] = graph_major_grid_color;
             ypix -= fontheight / 2;
+
+            draw_text(label, xpos, ypix, graph_yaxis[.tickcolor]);
             
-            draw_text(label, graph_x + graph_w + 5, ypix, graph_y2axis[.tickcolor]);
+            // Draw minor gridlines
+            new Fixed: increment = graph_yaxis[.major] / graph_yaxis[.minor];
+            for (new i = 0; i < graph_yaxis[.minor]; i++)
+            {
+                ypix = fround(graph_gety(y + i * increment));
+                if (y_column[ypix] == graph_bg)
+                    y_column[ypix] = graph_minor_grid_color;
+            }
+        }
+    }
+    
+    if (y2Labels)
+    {
+        // Y2 axis ticks
+        if (graph_y2axis[.min] != graph_y2axis[.max])
+        {
+            for (new Fixed: y = first_major(graph_y2axis); y <= graph_y2axis[.max]; y += graph_y2axis[.major])
+            {
+                new label{12};
+                label = get_ticklabel(y, graph_y2axis[.log]);
+                
+                new ypix = fround(graph_gety2(y));
+                ypix -= fontheight / 2;
+                
+                draw_text(label, graph_x + graph_w + 5, ypix, graph_y2axis[.tickcolor]);
+            }
         }
     }
     

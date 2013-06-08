@@ -72,7 +72,7 @@ void __Init_Data(void) {
 }
 
 register void *stack_pointer asm("sp");
-void Reset_Handler() __attribute__((noreturn, naked));
+void Reset_Handler() __attribute__((noreturn, naked, externally_visible));
 void Reset_Handler(void) {
     
     /* Initialize data and bss */
@@ -80,6 +80,11 @@ void Reset_Handler(void) {
     SCB->VTOR = (u32)g_pfnVectors;
     __Init_Data();
     __USB_Init();
+    
+    /* Set stack bottom to marker value */
+    *(uint32_t*)0x2000b800 = 0xDEADBEEF;
+    *(uint32_t*)0x2000b804 = 0xDEADBEEF;
+    *(uint32_t*)0x2000b808 = 0xDEADBEEF;
     
     main();
     while(1) {}

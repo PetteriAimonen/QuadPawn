@@ -233,16 +233,17 @@ unsigned amxdbg_get_caller(AMX *amx, unsigned *frame)
     AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
     cell *dat = (cell*)((amx->data!=NULL) ? amx->data : amx->base+(int)hdr->dat);
     
+    if (*frame > amx->stp) return 0; // Guard against corrupted stack
+    
     unsigned frm = *frame / 4;
-    
-    if (frm > amx->stp) return 0; // Guard against corrupted stack
-    
     unsigned addr = dat[frm + 1];
     
     printf("stack from %08x: %08x %08x %08x %08x\n",
            (unsigned)*frame, (unsigned)dat[frm], (unsigned)dat[frm + 1], (unsigned)dat[frm + 2], (unsigned)dat[frm + 3]);
     
     *frame = dat[frm] - (cell)dat;
+    
+    if (*frame > amx->stp) return 0; // Guard against corrupted stack
     
     return addr;
 }

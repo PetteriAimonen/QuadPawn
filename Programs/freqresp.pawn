@@ -98,22 +98,35 @@ clear()
     new Fixed: prevx2 = fix16_min, Fixed: prevy2;
     new i = 0;
     new Fixed: step = exp(log10i(maxfreq/minfreq) / steps_values[steps_idx] * log_of_10);
+    new prevfreq = 0;
     for (new freq = minfreq; freq < maxfreq; freq = _:(Fixed:freq * step))
     {
-        new outf = freq;
         new Fixed: ref_real, Fixed: ref_imag; // Reference response
-        if (waveform_idx == 0)
-        {
-            outf = waveout_digital(freq);
-            ref_real = FIX(0.0);
-            ref_imag = FIX(0.81);
-        }
-        else
-        {
-            waveout_sinewave(outbuf, freq);
-            ref_real = FIX(0.64);
-            ref_imag = FIX(0.0);
-        }
+        new outf;
+        
+        // Loop until we find the next highest frequency.
+        // Usually this is simple, but at high frequencies there is
+        // larger step between possible frequencies.
+        do
+        {   
+            outf = freq;
+            if (waveform_idx == 0)
+            {
+                outf = waveout_digital(freq);
+                ref_real = FIX(0.0);
+                ref_imag = FIX(0.81);
+            }
+            else
+            {
+                waveout_sinewave(outbuf, freq);
+                ref_real = FIX(0.64);
+                ref_imag = FIX(0.0);
+            }
+            
+            if (outf == prevfreq)
+                freq += freq / 10000 + 1;            
+        } while (outf == prevfreq);
+        prevfreq = outf;
         
         new inf = wavein_samplerate(outf * 1000);
         

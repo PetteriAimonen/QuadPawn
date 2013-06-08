@@ -1,0 +1,16 @@
+#include <fpga>
+#include <console>
+
+main()
+{
+	println(str(fpga_load("TESTFPGA.BIN")));
+	
+	new buf[3];
+	fpga_read(buf);
+	
+	for (new i = 0; i < 3; i++)
+	{
+	    println(strjoin("buf[", str(i), "] = 0x", hex(buf[i])));
+	}
+}
+

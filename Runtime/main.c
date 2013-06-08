@@ -10,6 +10,7 @@
 #include "stm32f10x.h"
 #include "ds203_io.h"
 #include "Interrupt.h"
+#include "alterbios.h"
 #include "ff.h"
 
 #include "menubar.h"
@@ -24,7 +25,6 @@
 #define FSMC_BTR1   (*((vu32 *)(0xA0000000+0x04)))
 #define FSMC_BTR2   (*((vu32 *)(0xA0000008+0x04)))
 
-FATFS fatfs;
 AMX amx;
 FIL amx_file;
 char amx_filename[20];
@@ -45,9 +45,9 @@ int amxinit_buttons(AMX *amx);
 int amxinit_fourier(AMX *amx);
 int amxinit_time(AMX *amx);
 int amxinit_device(AMX *amx);
+int amxinit_fpga(AMX *amx);
 int amx_timer_doevents(AMX *amx);
-
-register void *stack_pointer asm("sp");
+void overlay_init(AMX *amx, const char *filename, FIL *file);
 
 #define AMX_ERR_ABORT 100
 #define AMX_ERR_FILE_CHANGED 101
@@ -88,38 +88,6 @@ void TimerTick()
             __Set(BEEP_VOLUME, 0);
         }
     }
-}
-
-int overlay_callback(AMX *amx, int index)
-{
-    FIL *file = &amx_file;
-    AMX_HEADER *hdr = (AMX_HEADER*)amx->base;
-    AMX_OVERLAYINFO *tbl = (AMX_OVERLAYINFO*)(amx->base + hdr->overlays);
-    
-    amx->codesize = tbl[index].size;
-    amx->code = amx_poolfind(index);
-    if (amx->code == NULL)
-    {
-        // Have to load from disc
-        if ((amx->code = amx_poolalloc(tbl[index].size, index)) == NULL)
-            return AMX_ERR_OVERLAY;   /* failure allocating memory for the overlay */
-        
-        // Verify that the file has not changed
-        f_flush(&fatfs);
-        FILINFO file2;
-        f_stat(amx_filename, &file2);
-        if (file2.fsize != file->fsize)
-            return AMX_ERR_FILE_CHANGED;
-        
-        f_lseek(file, hdr->cod + tbl[index].offset);
-        unsigned count;
-        f_read(file, amx->code, tbl[index].size, &count);
-        if (count != tbl[index].size)
-            return AMX_ERR_FORMAT;
-        
-        return VerifyPcode(amx);
-    }
-    return AMX_ERR_NONE;
 }
 
 // Copied from amx.c
@@ -167,8 +135,9 @@ int loadprogram(const char *filename, char *error, size_t error_size)
         unsigned static_size = (hdr.stp - hdr.dat) + hdr.cod;
         amx_poolinit(vm_data + static_size, sizeof(vm_data) - static_size);
         
+        amx.base = vm_data;
         amx.data = vm_data + hdr.cod;
-        amx.overlay = overlay_callback;
+        overlay_init(&amx, amx_filename, &amx_file);
     }
     else
     {
@@ -196,6 +165,7 @@ int loadprogram(const char *filename, char *error, size_t error_size)
     amxinit_fourier(&amx);
     amxinit_time(&amx);
     amxinit_device(&amx);
+    amxinit_fpga(&amx);
     
     // Check that everything has been registered
     int regstat = amx_Register(&amx, NULL, -1);
@@ -365,15 +335,17 @@ int main(void)
     __Set(ADC_CTRL, EN);       
     __Set(ADC_MODE, SEPARATE);
     
-    FRESULT status = f_mount(0, &fatfs);
-    while (status != FR_OK)
+    int status = alterbios_check();
+    if (status < 0)
     {
         char buf[100];
-        snprintf(buf, sizeof(buf), "Failed to open the FAT12 filesystem: "
-                 "f_mount returned %d", status);
-        show_msgbox("Filesystem error", buf);
-        status = f_mount(0, &fatfs);
+        snprintf(buf, sizeof(buf), "AlterBIOS not found or too old: %d\n"
+                 "Please install it from https://github.com/PetteriAimonen/AlterBIOS", status);
+        while (1) show_msgbox("AlterBIOS is required", buf);
     }
+    alterbios_init();
+    
+    get_keys(ALL_KEYS); // Clear key buffer
     
     while (true)
     {
@@ -382,7 +354,6 @@ int main(void)
         get_keys(ANY_KEY);
         __Clear_Screen(0);
         
-        f_flush(&fatfs);
         char error[50] = {0};
         int status = loadprogram(amx_filename, error, sizeof(error));
         if (status != 0)
@@ -391,7 +362,7 @@ int main(void)
             snprintf(buffer, sizeof(buffer),
                      "Loading of program %s failed:\n\n"
                      "Error %d: %s\n\n"
-                     "%s\n", amx_filename, status, aux_StrError(status), error);
+                     "%s\n", amx_filename, status, my_aux_StrError(status), error);
             printf(buffer);
             printf(amx_filename);
             show_msgbox("Program load failed", buffer);

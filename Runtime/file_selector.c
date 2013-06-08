@@ -13,8 +13,6 @@
 #include "msgbox.h"
 #include "metadata.h"
 
-extern FATFS fatfs;
-
 static const uint32_t default_icon[] = {
 0b000000000000001000000000000000,
 0b000000000000011110000000000000,
@@ -204,7 +202,7 @@ void select_file(char result[13])
         if (get_keys(BUTTON2))
         {
             // Refresh
-            f_flush(&fatfs);
+            //f_flush(&fatfs);
             rerender = true;
         }
         

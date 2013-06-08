@@ -82,6 +82,19 @@ stock strpad(dest{}, length, chr = ' ')
         dest{i} = chr;
 }
 
+/// Pad a string to given length by appending characters.
+stock strrpad(dest{}, length, chr = ' ')
+{
+    new slen = strlen(dest);
+    new count = length - slen;
+    if (count <= 0) return;
+    
+    for (new i = 0; i < count; i++)
+        dest{slen + i} = chr;
+    
+    dest{length} = 0;
+}
+
 /// Split the string to two parts by some separator. The initial part is
 /// moved to dest and remaining part is left in the source. The separator
 /// is removed. Returns false if separator is not found or dest is too small.
