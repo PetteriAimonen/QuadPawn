@@ -9,8 +9,8 @@ const LOW = 0
 const HIGH = 1
 const SCL = 0
 const SDA = 1
-const EvType: { NIL = 0, START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION }
-new char_for_event_type{} = "?S01P"
+const EvType: { NIL = 0, START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, ACK, NAK, STOP_CONDITION }
+new char_for_event_type{} = "?S01anP"
 
 const Color: orange = RGB( 0xee, 0x66, 0x22)
 const Color: darkgray = RGB( 0x33, 0x33, 0x33)
@@ -108,6 +108,7 @@ analyze( samples[]{})
 {
   num_events = 0
   new  previous_level_of_line[] = [ -1, -1]
+  new  bit = 0
   // Go through the whole capture buffer
   for ( new t = 0;  t < NUM_SAMPLES;  t += 1)
   {
@@ -123,10 +124,19 @@ analyze( samples[]{})
         if ( SDA == line  &&  HIGH == previous_level_of_line[ SCL])
         {
           events[num_events].type = LOW == level ? START_CONDITION : STOP_CONDITION
+          bit = 0
         }
         else if ( SCL == line  &&  HIGH == level)
         {
-          events[num_events].type = LOW == previous_level_of_line[ SDA] ? TRANSMITTED_ZERO : TRANSMITTED_ONE
+          new  low = LOW == previous_level_of_line[ SDA]
+          if ( bit < 8) {
+            events[num_events].type = low ? TRANSMITTED_ZERO : TRANSMITTED_ONE
+            bit += 1
+          }
+          else {
+            events[num_events].type = low ? ACK : NAK
+            bit = 0
+          }
         }
         else {
           events[num_events].type = NIL
