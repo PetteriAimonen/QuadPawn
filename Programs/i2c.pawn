@@ -1,341 +1,740 @@
+// Horst Schmid, info@schmidhorst.de 2013-06-10
+// I2C: Significant improved functionallity
+// - Data Byte detection & decoding
+// - Channel free configurable
+// - increased record length
+// - Save as bitmap or CSV file
 
 #include <console>
+#include <config>
 
 
-const NUM_SAMPLES = 800
 const trace_height = 20 // pixels
-const LOW = 0
-const HIGH = 1
-const SCL = 0
-const SDA = 1
-const EvType: { NIL = 0, START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION }
-new char_for_event_type{} = "?S01P"
+// Event new_level:
+const Level:LOW = 0
+const Level:HIGH = 1
+// Event source: index, independent from channel
+const TraceIdx:SCL = 0
+const TraceIdx:SDA = 1
+const TraceIdx:SCL_AND_SDA = 2
 
-const Color: orange = RGB( 0xee, 0x66, 0x22)
+const EvType: { NIL = 0, START, ZERO, ONE, STOP, START_OR_NIL, STOP_OR_ONE }
+new char_for_event_type{} = "?S01PoI"  // o, I = double events, possibly 0, 1
+
 const Color: darkgray = RGB( 0x33, 0x33, 0x33)
 
-const Color: SCL_COLOR = yellow
-const Color: SDA_COLOR = cyan
-const Color: TEXT_COLOR = orange
+const Color: TEXT_COLOR = RGB( 0xee, 0x66, 0x22)
 
-
-new  sampling_rate = 400000
+new  sampling_rate //Hz
+new  num_samples
 new  bool: should_render
+new  bool: dispAbout
+new  Channel: ch[TraceIdx:2] = [Ch_C, Ch_D] //used Channel for SCL, SDA
+new  Color:colorT[Channel:4]=[blue, yellow, purple, green] // default colors for Ch_A .. Ch_D
+new  ch_labels[]{}=["Ch A", "Ch B", "Ch C", "Ch D"]
 
+new Fixed: thrV //threshold , if Ch_A or CH_B is used
+new bool:csvDulpRow
+new csvSCLyOffs
+// This data for detected events needs too much space and would allow only about 500 events:
+//#define Event [
+//          .when_happened, // index in to sample buffers
+//          .source, // SCL or SDA or SCL_AND_SDA
+//          .new_level, // LOW or HIGH
+//  EvType: .type, // NIL, START, ZERO, ONE, STOP, START_OR_ZERO, STOP_OR_ONE
+//  ]
+//new  events[EVENTS_SIZE][Event]
 
+// Packed into a 32-bit cell to save memory:
+// makes the code a little harder to read
+// Still 2x 4096 byte needed for the buffer with the original samples!
+// packed event
+// 16 bit 0 .. 15 for when_happend
+// bit 16, 17 ( (e >> 16) & 3 ) for source
+// bit 18 for low or high SCL
+// bit 19 for low or high SDA
+// bit 24, ...: type
 
-// This data *could* be packed into a 32-bit cell to save memory but it would
-// make the code harder to read and make no impact on the 2x 4096 byte sample
-// buffers.
-//
-#define Event [
-          .when_happened, // index in to sample buffers
-          .source, // SCL or SDA
-          .new_level, // LOW or HIGH
-  EvType: .type, // START_CONDITION, TRANSMITTED_ZERO, TRANSMITTED_ONE, STOP_CONDITION
-]
+const EVENTS_SIZE = 2560
+new events[EVENTS_SIZE]
 
-new  events[ 64][ Event]
 new  num_events
-
+new csv_sep{2} // separator for CSV export, either comma or semicolon
+// Remark: on the DSO203 screen we can't display a semicolon. A dash is displayed instead!
+#define Duration [
+  .time,
+  .count
+  ]
 
 // An oscilliscope trace ( either of SCL or SDA)
-//
 #define Trace [
-  // Row within the view at which the logic 0 level for this trace is drawn
-         .y,
-  // The color in which this trace is drawn
-  Color: .color,
-]
+  .yScr, // Row (Screen Pixels) within the view at which the logic 0 level for this trace is drawn
+  Color: .color, // The color in which this trace is drawn
+  ]
 
-new  traces[ 2][Trace]
-
+new traces[2][Trace] //= [[160, colorT[SCL]], [100, SDA_COLOR]]
 
 // This the view of the part of the trace that is visible.
-//
 #define View [
-  // .from is an index in to the captured sample arrays.  The time that they
+  // .fromT is an index in to the captured sample arrays.  The time that they
   // correspond to ( relative to the beginning of the capture) depends on the
   // sampling rate:
   //    time = i / sampling_rate
   //  ..so index 5 at a sampling rate of 100 kHz is
-  //    5 / 100000 = 0.00005 or 50 ns
-  .from,
-  // The number of indices across the view
-  .span,
-  // The ( index of the) first event that influences the view
-  .first_event,
-  // The number of columns of pixels across the view
-  .width,
-]
+  //    5 / 100000 = 0.00005 or 50 us
+  .fromT,
+  .spanT, // The number of indices (of samples) across the view
+  .firstEvNo // corresponding event number
+  ]
 
 new  view[ View]
+new  samples[2]{4096}
+
+// Bit bashing for events: Extract and set bits:
+#define getWhen(%1)   ((%1) & 0xFFFF)
+#define getSource(%1) (TraceIdx:(((%1) >> 16) & 3))
+
+//#define getNewLevel(%1, %2)  (Level:( ((%1) >> (20+_:(%2))) & 1))
+#define getNewSclLevel(%1)  (Level:( ((%1) >> 18) & 1))
+#define getNewSdaLevel(%1)  (Level:( ((%1) >> 19) & 1))
+#define getBitNo(%1) (((%1) >> 20) & 0x0F)
+#define getType(%1)   (EvType:((%1) >> 24))
+
+setWhen(&eve, t) {
+  eve &= 0xFFFF0000
+  eve |= t
+  }
+
+setSource(&eve, TraceIdx:source) {
+  eve &= 0xFFFCFFFF
+  eve |= (_:(source) &  3) << 16
+  }
+
+setNewLevel(&eve, Level:level, TraceIdx:tr) {
+  new s=18 + (_:tr & 1)
+  new m= 1 << s
+  eve &= ~m
+  eve |= _:level << s
+  }
 
 
-capture()
-{
-  new  samples[ 2]{NUM_SAMPLES}
+setBitNo(&eve, no) {
+  eve &= 0xFF0FFFFF
+  eve |= (no & 0x0F) << 20
+  }
 
+setType(&eve, EvType: type) {
+  eve &= 0x00FFFFFF
+  eve |= _:type << 24
+  }
+
+capture() {
   wavein_start()
-
   // Show an animation to indicate that the device is waiting for a trigger
   new  frame = 0
   new  spinner{} = "/-\\I"
   new  text{} = ""
-  while ( ! wavein_istriggered() )
-  {
+  MyDrawStatus("Waiting for a trigger ...")
+  draw_menubar("Cancel", "", "", "");
+  while ( ! wavein_istriggered()) {
+    if (get_keys(BUTTON1)) { //Cancel
+      draw_menu(.captured=false)
+      return
+      }
     text{0} = spinner{frame}
     draw_text( text, (screenwidth - fontwidth), 0, TEXT_COLOR, black)
     frame = ( frame + 1) & 0x3;
     delay_ms( 100);
-  }
-  draw_text(" ", (screenwidth - fontwidth), 0, TEXT_COLOR, black)
-
-  wavein_read( {0}, {0}, samples[SCL], samples[SDA])
-
-  analyze( samples)
-
-  view.from = 0
-  view.span = 399
-  view.first_event = 0
-
-  should_render = true
-}
-
-
-analyze( samples[]{})
-{
-  num_events = 0
-  new  previous_level_of_line[] = [ -1, -1]
-  // Go through the whole capture buffer
-  for ( new t = 0;  t < NUM_SAMPLES;  t += 1)
-  {
-    // Go through both channels ( lines / sources of events)
-    for ( new  line = SCL;  line <= SDA;  line += 1)
-    {
-      new  level = samples[ line]{ t}
-      if ( level != previous_level_of_line[ line]  &&  num_events < sizeof events)
-      {
-        events[num_events].when_happened = t
-        events[num_events].source = line
-        events[num_events].new_level = level
-        if ( SDA == line  &&  HIGH == previous_level_of_line[ SCL])
-        {
-          events[num_events].type = LOW == level ? START_CONDITION : STOP_CONDITION
+    }
+  MyDrawStatus("")
+  for (new TraceIdx:c=SCL; c<=SDA; c++) {
+    switch (ch[c]) {
+      case Ch_A:
+        wavein_read(samples[c])
+      case Ch_B:
+        wavein_read({0}, samples[c])
+      case Ch_C:
+        wavein_read({0}, {0}, samples[c])
+      case Ch_D:
+        wavein_read({0}, {0}, {0}, samples[c])
+      }
+    if (ch[c]<Ch_C) {
+      new thrB = 18+ fround(thrV*38)  // magnitude (0 ... 255) value for thrV voltage
+      for (new t=0; t< 4096; t++) {
+        if (samples[c]{t} < thrB) samples[c]{t}=0
+        else samples[c]{t}=1
         }
-        else if ( SCL == line  &&  HIGH == level)
-        {
-          events[num_events].type = LOW == previous_level_of_line[ SDA] ? TRANSMITTED_ZERO : TRANSMITTED_ONE
-        }
-        else {
-          events[num_events].type = NIL
-        }
-        num_events += 1
-        previous_level_of_line[ line] = level
       }
     }
+  analyze()
+  view.firstEvNo=2 // No 0, 1 used to have an "old value" also for 1st real event
+  // initially display whole captured sequence:
+  view.spanT=fround(fmul(FIX(1.2), getWhen(events[num_events-1]) - getWhen(events[2])))
+  view.fromT=fround(fmul(FIX(0.9), getWhen(events[view.firstEvNo])))
+  draw_menu(.captured=true) //including Save, Zoom, Move
+  should_render = true
   }
-}
 
 
-// Provide the pixel column within the view that corresponds to the specified
-// point in time.  Column 0 corresponds to view.from and column 399 corresponds
-// to view.to.
-//
-x_within_view_for( time)
-{
-  // Work out the time relative to the time in the leftmost column of pixels in
-  // the view
-  new  rel_time = time - view.from
-  return (view.width - 1) * rel_time / view.span
-}
+/// Clear the bottom row of screen and draw text there.
+stock MyDrawStatus(const str{}, line=0, Color: fg = white) {
+  new buffer{55} = "";
+  strcat(buffer, str);
+  strcat(buffer, "                                                      ");
+  draw_text(buffer, 0, line * fontheight, .fg = fg, .bg = black);
+  }
 
 
-y_within_view_for( trace[Trace], level)
-{
-  return trace.y + trace_height * level
-}
+// analyze the data from the samples and fill the array 'events'
+analyze() {
+  new Level:prevLevel[2]
+  new Level:level[2]
+  new bitNo=0
+  new byteCnt=0
+  new EvType:type;
+
+  MyDrawStatus("Analyzing! Please wait ...")
+  setWhen(events[0], 0) // use one initial dummy event
+  setSource(events[0], SCL_AND_SDA)
+  setType(events[0], NIL)
+  setNewLevel(events[0], Level:samples[SCL]{0}, SCL)
+  setNewLevel(events[1], Level:samples[SDA]{0}, SDA)
+  num_events = 1 // 1 dummy events
+  // Go through the whole capture buffer
+  prevLevel[SCL] = Level:samples[SCL]{0}
+  prevLevel[SDA] = Level:samples[SDA]{0}
+  for ( new t = 1;  t < num_samples;  t += 1) {
+    type=NIL
+    level[SCL] = Level:samples[SCL]{t}
+    level[SDA] = Level:samples[SDA]{t}
+    if (level[SCL]!=prevLevel[SCL] || level[SDA]!=prevLevel[SDA]) { // event
+      setWhen(events[num_events], t)
+      setNewLevel(events[num_events], level[SDA], SDA)
+      setNewLevel(events[num_events], level[SCL], SCL)
+      if (prevLevel[SCL]==level[SCL]) { //only SDA changed
+        setSource(events[num_events], SDA)
+        if (prevLevel[SCL]==HIGH) { // and also newLevel[SCL]
+          if (level[SDA]==LOW) {
+            type = START
+            bitNo=0
+            }
+          else type = STOP
+          }
+        } //only SDA changed
+      else if ( prevLevel[SDA] == level[SDA]) { //only SCL changed
+        setSource(events[num_events], SCL)
+        if (level[SCL]==HIGH) {
+          if (level[SDA]==LOW) type = ZERO
+          else type = ONE
+          }
+        } //only SCL changed
+      else { //SCL and SDA changed
+        setSource(events[num_events], SCL_AND_SDA)
+        if (level[SCL]==LOW && level[SDA]==LOW) {
+          // SDA to low together with SCL to low: START (if SDA 1st) or NIL (if SCL 1st)
+          // possibly also SDA to low and SCL to low, which is normally a NIL!
+          type = START_OR_NIL
+          }
+        else if (level[SCL]==HIGH && level[SDA]==HIGH) {
+          // SDA to high together with SCL to high: STOP if SCL 1st or HIGH if SDA 1st
+          type = STOP_OR_ONE
+          }
+        //combined: SDA to high and SCL to low or SDA to low and SCL to high
+        else if (level[SDA]== LOW) {  // && level[SCL]==HIGH
+          type = ZERO
+          }
+        } //SCL and SDA changed
+      if (type==START_OR_NIL && bitNo>0 && bitNo<9) {
+        type = NIL // half distance to normal not-NIL events?
+        }
+      setType(events[num_events], type)
+      if (type!=START && type!=STOP && type!=NIL && type != START_OR_NIL) { //most probably a data bit or acknowledge
+        //ZERO, ONE, STOP_OR_ONE
+        bitNo += 1;
+        setBitNo(events[num_events], bitNo)
+        if (bitNo==8) {
+          byteCnt += 1
+          }
+        else if (bitNo==9) { //ACK or NACK
+          bitNo=0
+          }
+        }
+      prevLevel[SCL]=level[SCL]
+      prevLevel[SDA]=level[SDA]
+      num_events += 1
+      if (num_events >= sizeof events) break
+      } //if event
+    } // for t
+  MyDrawStatus(strjoin("Record Len=", str(1000 * num_samples/sampling_rate), "ms, ", str(byteCnt)," Bytes detected") )
+  //get I2C clock frequency: What is the most often occuring sample distance for a rising clock for a data bit (= SDA=ZERO or ONE)?
+  new durations[20][Duration] // array to count the number of occurances for up to 20 distances
+  //for (new d=0; d<20; d++) {durations[d].time=0;durations[d].count=0;}
+  new t0=getWhen(events[3])
+  new ev=4
+  while (ev<num_events) {
+    new t1=getWhen(events[ev])
+    if (getType(events[ev]) == ZERO || getType(events[ev]) == ONE) {
+      new dt= t1-t0
+      new d=0
+      while (d< sizeof durations) {
+        if (durations[d].time==0 || durations[d].time==dt) { //empty entry or an entry for that distance
+          durations[d].time=dt //if empty entry: we need to set it
+          durations[d].count += 1
+          break
+          } //if
+        d++
+        } // while d
+      } // if != NIL
+    if (getType(events[ev])!=NIL) t0=t1
+    ev++
+    } // while ev
+// find now the highest count:
+  new cnt=0
+  new t
+  for (new d=0; d< sizeof durations; d++) {
+    if (durations[d].count>cnt) {
+      cnt=durations[d].count
+      t =durations[d].time
+      }
+    }
+  if (t>3) {
+    MyDrawStatus(strjoin("I2C f = ", str(sampling_rate/(1000*t)), " kHz, ", str(num_events-2), " Events in about ", str(1000 * getWhen(events[num_events-1])/sampling_rate), " ms"), 1);
+    }
+/*
+  new d=0
+  text=""
+  while (d < sizeof durations) {
+    if (durations[d].count==0) break
+    if (strlen(text)<160) {
+      strcat(text, str(durations[d].time))
+      strcat(text, ": ")
+      strcat(text, str(durations[d].count))
+      strcat(text, ", ")
+      }
+    d++
+    }
+  show_msgbox(text)
+*/
+  } // analyze
 
 
-// Renders the display
-//
-render()
-{
+// time-2-x: Provide the pixel column within the view that corresponds to the specified
+// point in sample (=time).
+t2x( time) {
+  if (time<view.fromT) return (-1)
+  new  rel_time = time - view.fromT
+  return (screenwidth - 1) * rel_time / view.spanT
+  }
+
+//get for trace SCL or SDA and level ZERO or ONE the y value for the screen display
+lev2y( trace[Trace], Level:level) {
+  return trace.yScr + trace_height * _:level
+  }
+
+
+// Renders the display: Display the events
+render() {
   // Event: S, P, 0, 1 ( these all correspond to a single point in time)
   // Macro event: Address (7-bit), TxType(W/R), byte (8-bit) or ACK bit (A/N)
   //    Address and byte cover a span of time ( multiple events)
 
-  // indexes in time require 12 bits.  The remaining 20 bits can be used to encode stuff
+  // indexes in time require 12 bits.  The remaining 20 bits are used to encode stuff
 
   // There is only a single sequence of events that is used to render both SCL
   // and SDA since events such as a Start Condition depend upon the state of
   // both lines
 
-  // If both SCL and SDA change at the same time ( indicating the sampling rate
-  // is too low, but still) then this is encoded as two consecutive events
+  // If both SCL and SDA change at the same time (indicating the sampling rate
+  // is a little to low to separate them) then this is encoded as a 'double-event'
   // related to the same point in time
 
-  // Zoom: Don't zoom out so far that the 8 pixel-wide single-character
-  // explanations of events overlap
+  // Zoom: If you are zoom out far, then the 8 pixel-wide single-character
+  // explanations of events will overlap
 
+  new  previous_x = -1
+  new previous_y_for_trace[2]
+  new y0
   // Blank out the previous render of the traces:
-  fill_rectangle( 0, 100 - 10 - fontheight, view.width, 190 - (90 - fontheight) + 1, black);
+  y0 = traces[SDA].yScr - 10 - 3*fontheight
+  new y1 = traces[SCL].yScr + trace_height + 11
+  fill_rectangle( 0, y0, screenwidth, y1-y0-1, black);
+
+  // "x-axis" for both traces:
+  y0=lev2y(traces[SCL] ,LOW)
+  drawline(0, y0, screenwidth-1, y0, darkgray)
+  y0=lev2y(traces[SDA] ,LOW)
+  drawline(0, y0, screenwidth-1, y0, darkgray)
+
 
   // These are X ordinates on the screen of the rendered event just previously
-  new  previous_x_for_trace[] = [ 0, 0]
-  new  previous_y_for_trace[] = [ 0, 0]
+  previous_y_for_trace[SCL]= lev2y(traces[SCL], getNewSclLevel(events[0]))
+  previous_y_for_trace[SDA]= lev2y(traces[SDA], getNewSdaLevel(events[1]))
 
-  // Go through all of the events that influence the view
-  for ( new  ev = view.first_event;  ;  ev += 1)
-  {
-    new  event[Event]
-    new  trace[Trace]
+  new bitCnt = 0;
+  new xByteStart;
+  new yByteLine = (traces[SCL].yScr + traces[SDA].yScr + trace_height) / 2 - fontheight/2
+  new byteVal;
+  new byteCnt=0
+  new EvType:type
 
-    if ( num_events <= ev  ||  view.from + view.span < events[ev].when_happened)
-      break
+  // Go through all of the events
+  for ( new  ev = 1;  ev < num_events;  ev += 1) {
+    new  event
+    event = events[ev]
 
-    event = events[ ev]
-    trace = traces[ event.source]
-    new  previous_level = event.new_level ^ 1
-    new  previous_y = y_within_view_for( trace, previous_level)
-    new  new_y =      y_within_view_for( trace, event.new_level)
-    new  new_x = x_within_view_for( event.when_happened)
-
-    if ( view.from < event.when_happened)
-    {
-      if ( event.type != NIL)
-      {
-        drawline( new_x, 190, new_x, 100 - 10, darkgray)
-        new  text{2}
-        text{0} = char_for_event_type{ event.type}
-        text{1} = 0
-        draw_text( text, (new_x - 4), 100 - 10 - fontheight, TEXT_COLOR, black)
+//    r=draw_trace (event)
+    new new_x = t2x(getWhen(event))
+    type=getType(event)
+    if (type==NIL) bitCnt=0
+    else bitCnt=getBitNo(event)
+    if (new_x<0) {
+      previous_x = 0
+      if (bitCnt==8) byteCnt += 1
       }
+    else {
+      new Level:lev[TraceIdx:2]
+      lev[SCL] = getNewSclLevel(event)
+      lev[SDA] = getNewSdaLevel(event)
+      new  new_y[TraceIdx:2]
+      new_y[SCL] = lev2y(traces[SCL], lev[SCL])
+      new_y[SDA] = lev2y(traces[SDA], lev[SDA])
+      new prevX=previous_x
+      if (prevX>=screenwidth+50) return; //fully outside screen
+      if (new_x < screenwidth && type != NIL) {
+        //draw vertical line for event and event type character
+        drawline( new_x, traces[SCL].yScr+trace_height+9, new_x, traces[ SDA].yScr - 10, darkgray)
+        new  text{2}
+        text{0} = char_for_event_type{type}
+        text{1} = 0
+        draw_text( text, (new_x - 4), traces[SDA].yScr - 10 - fontheight, TEXT_COLOR, black)
+        }
+      // Draw vertical line that represents the transition to the new level
+      new new_x2
+      if (new_x>=screenwidth) new_x2=screenwidth-1
+      else new_x2=new_x
+      for (new TraceIdx:c=SCL; c<=SDA; c++) {
+        if (previous_y_for_trace[c] != new_y[c] && (new_x<screenwidth) )
+         drawline( new_x, previous_y_for_trace[c], new_x, new_y[c], traces[c].color)
+        drawline( prevX, previous_y_for_trace[c], new_x2, previous_y_for_trace[c], traces[c].color)
+        previous_y_for_trace[c] = new_y[c]
+        }
+      previous_x = new_x
+      if (bitCnt>0) {
+        draw_text( str(bitCnt), (previous_x - 4), traces[SDA].yScr - 10 - 3*fontheight, TEXT_COLOR, black)
+        }
+      if (bitCnt==1) { //most probably a data bit or acknowledge
+        byteVal=0;
+        if (type == ONE || type == STOP_OR_ONE) byteVal = 1;
+        xByteStart=previous_x
+        }
+      else if (bitCnt>0 && bitCnt<9 && type!=NIL) {
+        byteVal = byteVal << 1;
+        if (type == ONE || type == STOP_OR_ONE) byteVal += 1;
+        new xMax=previous_x;
+        if (xMax>=screenwidth) xMax=screenwidth -1;
+        if (xByteStart<0) xByteStart=0
+        if (bitCnt==8) {
+          byteCnt += 1
+          if (xByteStart<screenwidth && xMax>xByteStart) {
+            //mark the bits for a byte and write byte value in hex:
+            new w=xMax-xByteStart
+            fill_rectangle(xByteStart, yByteLine, w, fontheight, darkgray);
+            new text{12};
+            valstr(text, byteVal, .base = 16, .minlength=2);
+            draw_text(text, (xByteStart + xMax)/2, yByteLine, TEXT_COLOR, .center = true);
+            if (xByteStart>4) { // write number of the byte to bottom line
+              new t2{4}
+              valstr(t2, byteCnt, .base=16, .minlength=2)
+              //text=strjoin(" #", str(byteCnt), "(", t2, ")")
+              strcpy(text, "#")
+              strcat(text, str(byteCnt))
+              if (w>=7*fontwidth) {
+                strcat(text, "(")
+                strcat(text, t2)
+                strcat(text, ")")
+                }
+              draw_text(text, xByteStart, traces[SDA].yScr - 10 - 2 * fontheight, TEXT_COLOR, black)
+              } // if (xByteStart>4)
+            } // if (xByteStart<screenwidth && xMax>xByteStart)
+          } // if bitCnt==8
+        } //  else if (bitCnt>0 && bitCnt<9 && type!=NIL)
+      else if (bitCnt==9) { //ACK or NACK
+        if (previous_x>=4 && previous_x<screenwidth-4) {
+          if (getNewSdaLevel(event)==LOW)//ACK
+           draw_text("A", previous_x - 4, yByteLine, white, black)
+          else  //NACK
+           draw_text("N", previous_x - 4, yByteLine, white, black)
+          }
+        } // bitCnt=9
 
-      // Draw the horizontal line that represents the signal maintaining its
-      // level between the previous event and this one
-      drawline( previous_x_for_trace[event.source], previous_y, new_x, previous_y, trace.color)
-
-      // Draw the line that represents the transition to the new level
-      drawline( new_x, previous_y, new_x, new_y, trace.color)
-    }
-
-    previous_x_for_trace[event.source] = new_x
-    previous_y_for_trace[event.source] = new_y
+      } //if (new_x<0) else
+    } //for ev
   }
-  // Draw the horizontal lines of the signals going off the right-hand-side of the view
-  for ( new  t = 0;  t < sizeof traces;  t += 1)
-  {
-    new  final_y = previous_y_for_trace[ t]
-    drawline( previous_x_for_trace[t], final_y, view.width - 1, final_y, traces[t].color)
-  }
-}
 
 
-set_sampling_rate()
-{
+set_sampling_rate() {
   sampling_rate = wavein_samplerate( clamp(sampling_rate, 1000, 72000000) )
-
   new text{200} = "Sampling Rate: "
   strcat( text, str(sampling_rate / 1000) )
   strcat( text, " kHz")
-  draw_status( text)
-}
+  MyDrawStatus( text)
+  }
 
 
-scroll_right()
-{
-  view.from += 100
-  if ( NUM_SAMPLES - 1 < view.from + view.span)
-    view.from = NUM_SAMPLES - 1 - view.span
-  while ( events[view.first_event].when_happened < view.from)
-    view.first_event += 1
-  should_render = true
-}
+stock show_debug() {
+  cons_row = cons_rows - 1;
+  print ("Samples / Events (total): "); print(str(num_samples)); print ("/"); println( str(num_events) )
+  print ("Sample No of 1st/last event: "); print(str(getWhen(events[2]))); print ("/");
+  if (num_events>0) println(str(getWhen(events[num_events-1])))
+  else println("none")
+  print("view.fromT/spanT: "); print(str(view.fromT)); print("/"); println(str(view.spanT))
+  print("view.firstEvNo/firstEvT: "); print( str(view.firstEvNo)); print("/"); println( str(getWhen(events[view.firstEvNo])) )
+  new ev=0
+  new x_old=-1
+  do {
+    new t = getWhen(events[ev])
+    new x=t2x(t)
+    if (x>=0 && x_old<0) {
+      print("Shown events start: ev="); print(str(ev)); print (" at t="); print(str(t)); print(" at x="); println(str(x))
+    }
+    if (x>=screenwidth) {
+      print("x=");print(str(x)); print(" for ev="); print(str(ev)); print(" at t="); print(str(getWhen(events[ev])))
+      t= getWhen(events[ev-1])
+      x=t2x(t)
+      print(" ... ev="); print(str(ev-1)); print(" at t="); print(str(t)); print(" at x="); println(str(x))
+      break;
+      }
+    x_old=x
+    ev++
+    } while(ev<num_events)
+  print("HeapSpace: "); print(str(heapspace()))
+  }
 
-scroll_left()
-{
-  view.from -= 100
-  if ( view.from < 0)
-    view.from = 0
-  while ( 0 < view.first_event  &&  view.from <= events[view.first_event - 1].when_happened)
-    view.first_event -= 1
-  should_render = true
-}
+configure(bool: load_only = false) {
+  new sr_labels[]{}=["1 kHz", "2 kHz", "5 kHz", "10 kHz", "20 kHz", "50 kHz", "100 kHz", "200 kHz", "400 kHz", "800 kHz", "1 MHz", "2 MHz", "4 MHz", "8 MHz", "16 MHz"];
+  new sr[]=[1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 400000, 800000, 1000000, 2000000, 4000000, 8000000, 16000000];
+  new csv_sep_labels[]{}=["Comma", "Semicolon"]
+  static samplingRate_idx=8; //default 400kHz, siutable for 100kHz I2C clock frequence
+  static csv_idx=0
+  start_config("i2c.ini", load_only);
+  while (do_config() || ch[SCL]==ch[SDA]) {
+    config_boolean("AboutScreen", "About Startup Screen", dispAbout, true)
+    config_multichoice("Ch_SCL", "SCL Channel", _:ch[SCL], ch_labels, 2)
+    config_multichoice("Ch_SDA", "SDA Channel", _:ch[SDA], ch_labels, 3)
+    if (ch[SCL]<Ch_C || ch[SDA]<Ch_C) {
+      config_fixed("ChABthreshold", "Channel A/B Threshold [V]", thrV, FIX(1.5), FIX(0.1), FIX(0.2), FIX(4.8))
+      }
+    config_multichoice("SamplingRate", "SamplingRate", samplingRate_idx, sr_labels, 8);
+    config_multichoice("CSVsep", "CSV Separator", csv_idx, csv_sep_labels, 1);
+    config_boolean("CSVdoubleRow", "CSV duplicate rows", csvDulpRow, true, "Helpfull for Charts: Gives vertical slope lines")
+    config_integer("CSVyOffs", "CSV y Offset for SCL", csvSCLyOffs, 0, 0, 2, "gives a y Trace separation in Excel Chart")
 
-
-increase_samping_rate()
-{
-  sampling_rate *= 2
+//    if (ch[SCL]==ch[SDA]) MyDrawStatus("SCL and SDA cannot both use the same channel!", .fg = red)
+//    else MyDrawStatus("")
+    }
+  sampling_rate=sr[samplingRate_idx];
+  if (sampling_rate>=1000000 && load_only == false && (ch[SCL]>Ch_B || ch[SDA]>Ch_B)) {
+    show_msgbox("Attention: Due to the high capacitance of the ESD protection diode D5 in the DSO203 at Ch C and D short pulses may not be captured correctly! http://www.seeedstudio.com/forum/viewtopic.php?f=22&t=1978&p=6953")
+    }
+  if (sampling_rate>=1000000 && load_only == false && (ch[SCL]>Ch_B || ch[SDA]>Ch_B) && (ch[SCL]<=Ch_B || ch[SDA]<=Ch_B)) {
+    show_msgbox("Attention: Due to the high capacitance of the ESD protection diode D5 in the DSO203 at Ch C and D there is a time offset of a few 100ns between analog and digital channels! http://www.seeedstudio.com/forum/viewtopic.php?f=22&t=1978&p=6953")
+    }
+  clear_screen();
+  num_samples=4096
+  if (csv_idx==0) csv_sep=","
+  else csv_sep=";" // Attention: On DSO203 instead of an ";" an "-" is displayed!
+  if (ch[SCL]==Ch_A || ch[SDA]==Ch_A)
+   config_chA(ADC_DC, ADC_1V, .offset=25); // 1V/DIV -> 25/div,
+  if (ch[SCL]==Ch_B || ch[SDA]==Ch_B)
+   config_chB(ADC_DC, ADC_1V, .offset=12)
+  if (ch[SDA]>=Ch_C) wavein_settrigger( Trig_NegEdge, ch[SDA])
+  else //  38 / V
+   wavein_settrigger(Trig_NegEdge, ch[SDA], .threshold = 18+ fround(thrV*38))
   set_sampling_rate()
-}
+  traces[SCL].color = colorT[ch[SCL]]
+  traces[SDA].color = colorT[ch[SDA]]
+  }
 
-decrese_sampling_rate()
-{
-  sampling_rate /= 2
-  set_sampling_rate()
-}
+draw_menu(bool: captured) {
+  if (captured) {
+    draw_menubar("Capture", " Save", "Config", "Quit")
+    draw_text("Zoom", 300, 223, .fg = white, .bg=transparent, .center = true)
+    draw_text("Move", 345, 223, .fg = white, .bg=transparent, .center = true)
+    }
+  else draw_menubar("Capture", "", "Config", "Quit")
+  }
 
+save() {
+  draw_menubar("BMP", "CSV", "", "Cancel");
+  while (!peek_keys(BUTTON1 | BUTTON2 | BUTTON4)) {} //wait for any button
+  if (get_keys(BUTTON1)) {
+    new filename{14} = "i2c_%03d.BMP";
+    select_filename(filename);
 
-show_debug()
-{
-  print("events:"); println( str(num_events) )
-  print("view.from:"); println( str(view.from) )
-  print("view.first_event:"); println( str(view.first_event) )
-}
+    MyDrawStatus(strjoin("Saving ", filename));
+    if (save_bitmap(filename)) MyDrawStatus(strjoin("Saved ", filename), .fg=green);
+    else MyDrawStatus("Bitmap save failed!", .fg=red);
+    }
+  else if (get_keys(BUTTON2)) {
+    new filename{14} = "i2c_%03d.CSV";
+    select_filename(filename);
+    MyDrawStatus(strjoin("Saving ", filename));
+    new File: f = f_open(filename, FA_WRITE | FA_CREATE_NEW);
+    f_write(f, strjoin("EvType", csv_sep, "Sample#", csv_sep, "SCL", csv_sep, "SDA"));
+    f_write(f, strjoin(csv_sep, "Bit", csv_sep, "Analysis\r\n"));
+    new Level:scl=getNewSclLevel(events[0])
+    new Level:sda=getNewSdaLevel(events[0])
+    new  evType{2}
+    new byteVal
+    evType{1} = 0
+    for (new ev=1; ev < num_events; ev++) {
+      new event
+      event = events[ev]
+      new EvType:type=getType(event)
+      evType{0} = char_for_event_type{type}
+      new bit=getBitNo(event)
+      new sBit{}="        "
+      if (bit>0 && bit<=9 && type!=NIL) {
+        sBit=str(bit)
+        if (bit==1) byteVal=0
+        else byteVal = byteVal << 1
+        if (type == ONE || type == STOP_OR_ONE) byteVal += 1;
+        }
+      else sBit=""
+      new t2{4}
+      new t3{20}
+      if (bit==8) {
+        valstr(t2, byteVal, .base=16, .minlength=2)
+        t3="0x"
+        strcat(t3, t2)
+        }
+      else t3=""
+      if (csvDulpRow) {
+        f_write(f, strjoin(evType, csv_sep, str(getWhen(event)), csv_sep, str(csvSCLyOffs + _:scl), csv_sep, str(_:sda), "\r\n"))
+        }
+      scl=getNewSclLevel(event)
+      sda=getNewSdaLevel(event)
+      f_write(f, strjoin(evType, csv_sep, str(getWhen(event)), csv_sep, str(csvSCLyOffs + _:scl), csv_sep, str(_:sda)));
+      f_write(f, strjoin(csv_sep, sBit, csv_sep, t3, "\r\n"));
+      }
+    f_write(f, strjoin("Sampling Rate: ", str(sampling_rate / 1000), " kHz"));
+    if (f_close(f))
+     MyDrawStatus(strjoin("Saved ", filename), .fg=green);
+    else
+     MyDrawStatus("CSV save failed!", .fg=red);
+    }
+  get_keys(ANY_KEY);
+  }
 
-
-main()
-{
-  traces[ SCL].y = 160
-  traces[ SCL].color = SCL_COLOR
-  traces[ SDA].y = 100
-  traces[ SDA].color = SDA_COLOR
-
-  view.width = 400
-
-  //draw_menubar("Capture", "Measure", "", "Quit")
-  draw_menubar("Capture", "", "", "Quit")
-
+main() {
+  traces[ SCL].yScr = 160
+  traces[ SDA].yScr = 100
+  thrV=FIX(1.5)
+  configure(.load_only = true); //Layout, captureFrequHz
+  if (dispAbout) {
+    draw_menubar("OK", "", "", "") //draw_menubar("Capture", "", "", "Quit")
+    println("The sampling rate should be at least 4 times the I2C clock frequency, better 8 .. 12 times.")
+    println("But the higher the sampling frequency, then less 'events' can be captured at a trigger. An event is an slope, either SCL or SDA. Or slope on both lines!");
+    println("");
+    println("One byte on the I2C bus are about 20 ... 30 events. Event Codes:")
+    println("S = Start, 0 = SDA low, 1 = SDA high, P = Stop,")
+    println("o = Start or SDA low, I = Stop or SDA high")
+    println("Horst Schmid 2013, www.schmidhorst.de")
+    println("Neil Stockbridge 2012 and https://github.com/PetteriAimonen")
+    while (!get_keys(BUTTON1)) {}
+    clear_console()
+    }
+  draw_menu(.captured=false)
+  print("Inputs: SCL="); print(ch_labels[ch[SCL]])
+  print(", SDA="); println(ch_labels[ch[SDA]])
+  println("")
   // Begin sampling when there is a falling edge on the SDA line ( which is
   // part of a Start Condition, the other part begin that SCL is high)
-  wavein_settrigger( Trig_NegEdge, Ch_D)
-
-  set_sampling_rate()
-
-  while (!get_keys(BUTTON4))
-  {
-    if ( get_keys(BUTTON1) )
-    {
+  while (!get_keys(BUTTON4)) { //Quit
+    if ( get_keys(BUTTON1) ) { //capture
       capture()
-    }
-    else if ( get_keys(BUTTON3) )
-    {
+      }
+    else if (get_keys(BUTTON2)) { // Save
+      save()
+      draw_menu(.captured=true)
+      should_render = true
+      }
+    else if ( get_keys(BUTTON3) ) { //Config
+      configure()
+      draw_menu(.captured=true)
+      should_render = true
+      }
+    else if ( get_keys(SCROLL1_PRESS) ) {
       show_debug()
-    }
-    else if ( get_keys(SCROLL2_RIGHT) )
-    {
-      scroll_right()
-    }
-    else if ( get_keys(SCROLL2_LEFT) )
-    {
-      scroll_left()
-    }
-    else if ( get_keys(SCROLL1_RIGHT) )
-    {
-      increase_samping_rate()
-    }
-    else if ( get_keys(SCROLL1_LEFT) )
-    {
-      decrese_sampling_rate()
-    }
-
-    if ( should_render)
-    {
+      }
+    else if ( get_keys(SCROLL2_RIGHT) ) { //move / scroll horizontal
+      if ( view.fromT + view.spanT < num_samples - 1)
+        view.fromT += fround(fmul(FIX(0.15), view.spanT))
+      while ( (getWhen(events[view.firstEvNo]) < view.fromT)
+       && (view.firstEvNo< sizeof events - 1)) // 2013-04-29 added to avoid crashes!
+       view.firstEvNo += 1
+      should_render = true
+      }
+    else if ( get_keys(SCROLL2_LEFT) ) {
+      view.fromT -= fround(fmul(FIX(0.15), view.spanT)) // move 10% of screen
+      if ( view.fromT < 0) view.fromT = 0
+      //find the 1st event on screen:
+      while ( view.firstEvNo > 2 &&  view.fromT <= getWhen(events[view.firstEvNo - 1]))
+       view.firstEvNo -= 1
+      new t = getWhen(events[2])/2
+      if (view.fromT<t) view.fromT=t
+      should_render = true
+      }
+    else if ( get_keys(SCROLL1_LEFT) ) { //Zoom
+      if (view.spanT<2000) view.spanT = fround(fmul(FIX(1.5), view.spanT+1) )-1
+      if (view.spanT>num_samples) view.spanT = num_samples -1
+      should_render = true
+      }
+    else if ( get_keys(SCROLL1_RIGHT) ) {
+      if (view.spanT>=30) view.spanT = fround(fdiv(view.spanT+1, FIX(1.5))) -1
+      should_render = true
+      }
+    if ( should_render) {
       render()
       should_render = false
-    }
+      }
     delay_ms( 10);
+    }
   }
-}
+
+new const program_icon[] = [
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+    0b1110000001111000000000000111111,
+    0b1110000110000110000000011111111,
+    0b1110000000000011000001111111111,
+    0b1110000000000011000011110000000,
+    0b1110000000000110000011100000000,
+    0b1110000000011000000111000000000,
+    0b1110000001100000000111000000000,
+    0b1110000110000000000111000000000,
+    0b1110000110000000000111000000000,
+    0b1110000111111110000111000000000,
+    0b1110000111111110000111000000000,
+    0b1110000000000000000111000000000,
+    0b1110000000000000000111000000000,
+    0b1110000000000000000111000000000,
+    0b1110000000000000000111000000000,
+    0b1110000000000000000011100000000,
+    0b1110000000000000000011110000000,
+    0b1110000000000000000001111111111,
+    0b1110000000000000000000011111111,
+    0b1110000000000000000000000111111,
+    0b0000000000000000000000000000000,
+    0b0000000000000000000000000000000,
+];
+
+/// By default, the name of the program is the name of the file, voltmetr.amx.
+/// Here we can specify a nicer name, that can be longer and contain spaces.
+new const program_name{} = "I2C Analyzer";
+
+/// The metadata module marks the program icon and name for inclusion in the
+/// binary. You must specify the icon and/or name first, and then include
+/// the module.
+#include <metadata>
 
