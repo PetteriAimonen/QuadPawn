@@ -10,4 +10,4 @@ It offers a comprehensive set of [libraries](https://github.com/PetteriAimonen/Q
 intuitive program selector and basic debugging facilities.
 
 Read the [Getting started](https://github.com/PetteriAimonen/QuadPawn/wiki/Getting-started) guide, or just download
-[the runtime](https://github.com/PetteriAimonen/QuadPawn/downloads) and [some apps](https://github.com/PetteriAimonen/QuadPawn/wiki).
+[the runtime](http://koti.kapsi.fi/~jpa/dsoquad/#QuadPawn) and [some apps](https://github.com/PetteriAimonen/QuadPawn/wiki).
