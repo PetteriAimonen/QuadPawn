@@ -53,15 +53,11 @@ static cell AMX_NATIVE_CALL amx_fpga_load(AMX *amx, const cell *params)
     char *fname;
     amx_StrParam(amx, params[1], fname);
     
-    uint8_t *buffer;
-    if (amx_Allot(amx, 1024/sizeof(cell), (cell**)&buffer) != 0)
-        return false;
-    
     bool status = false;
     if (!fname[0])
     {
         have_custom_image = false;
-        status = fpga_configure(NULL, buffer);
+        status = fpga_configure(NULL);
         set_port_directions(default_pins);
     }
     else
@@ -72,12 +68,11 @@ static cell AMX_NATIVE_CALL amx_fpga_load(AMX *amx, const cell *params)
         if (f_open(&file, fname, FA_READ) != FR_OK)
             return false;
 
-        status = fpga_configure(&file, buffer);
+        status = fpga_configure(&file);
         
         f_close(&file);
     }
     
-    amx_Release(amx, (cell*)buffer);
     return status;
 }
 
@@ -163,14 +158,8 @@ int amxinit_fpga(AMX *amx)
     
     if (have_custom_image)
     {
-        uint8_t *buffer;
-        if (amx_Allot(amx, 1024/sizeof(cell), (cell**)&buffer) != 0)
-            return false;
-    
         have_custom_image = false;
-        fpga_configure(NULL, buffer); // Restore original FPGA image
-    
-        amx_Release(amx, (cell*)buffer);
+        fpga_configure(NULL); // Restore original FPGA image
     }
     
     set_port_directions(default_pins);
