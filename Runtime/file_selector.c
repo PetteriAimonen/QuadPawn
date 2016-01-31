@@ -236,7 +236,7 @@ void select_file(char result[13])
                 {
                     page--;
                     render_screen(page, &maxindex);
-                    index += 12;
+                    index += ICONS_ON_SCREEN;
                 }
                 else
                 {
@@ -246,10 +246,10 @@ void select_file(char result[13])
             
             if (index >= maxindex)
             {
-                if (maxindex > ICONS_ON_SCREEN)
+                if (maxindex >= ICONS_ON_SCREEN)
                 {
                     page++;
-                    index -= 12;
+                    index -= ICONS_ON_SCREEN;
                     rerender = true;
                 }
                 else
