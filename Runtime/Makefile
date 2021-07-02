@@ -2,7 +2,9 @@
 # Petteri Aimonen <jpa@dso.mail.kapsi.fi> 2012
 
 # Name of the target application
-NAME = PAWN_APP
+_NAME = PAWN
+APP = 4
+NAME = $(_NAME)$(APP)
 
 # Names of the object files (add all .c files you want to include)
 OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
@@ -17,7 +19,7 @@ OBJS = main.o ds203_io.o libc_glue.o drawing.o menubar.o buttons.o \
 COMMITID := $(shell git describe --always || echo unknown)
 
 # Linker script (choose which application position to use)
-LFLAGS  = -L linker_scripts -T app4.lds
+LFLAGS  = -L linker_scripts -T app$(APP).lds
 
 # Any libraries to include
 LIBS = -lm -lgcc baselibc/libc.a
@@ -49,7 +51,7 @@ CFLAGS += -fno-common -Os -g -std=gnu99 -DNDEBUG
 #CFLAGS += -flto
 
 # Compiler warnings
-CFLAGS += -Wall -Werror -Wno-unused
+CFLAGS += -Wall -Wno-error -Wno-unused
 
 # Default linker arguments (disables GCC-provided startup.c, creates .map file)
 LFLAGS += -nostartfiles -nostdlib -fwhole-program -Wl,-Map=build/$(NAME).map -eReset_Handler
@@ -69,7 +71,8 @@ clean:
 $(NAME).HEX: build/$(NAME).elf
 	$(CP) -O ihex $< build/temp.hex
 	head -n -1 build/temp.hex > $(NAME).HEX
-	cat alterbios/ALTBIOS.HEX >> $(NAME).HEX
+	$(CP) -O binary $< $(NAME).BIN
+#	cat alterbios/ALTBIOS.HEX >> $(NAME).HEX
 
 baselibc/libc.a: baselibc/Makefile
 	make -C baselibc
