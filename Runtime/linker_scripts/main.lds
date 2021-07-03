@@ -28,7 +28,7 @@ SECTIONS
       build/BIOS.o
     }
     
-    .alterbios 0x08044000 (NOLOAD) : {
+    .alterbios 0x08009400 (NOLOAD) : {
       build/alterbios.o
     }
 

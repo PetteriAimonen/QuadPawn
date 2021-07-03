@@ -1,0 +1,36 @@
+#include <console>
+
+
+main()
+{
+	new curvalue {8} ;
+	print("SERIAL NUMBER :           ");
+	new serialNum = read_SN(); //sadly it is signed
+	new firstByte = serialNum >>> 24;
+	serialNum &= 0x00FFFFFF;
+	valstr(curvalue, firstByte,  2,  16,  2);
+	print(curvalue, blue);
+	valstr(curvalue, serialNum,  6,  16,  6);
+	println(curvalue);
+ 
+
+	print("LICENSE CODE HW <= 2.72 : ");
+	valstr(curvalue, read_flash(0x08003807),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x08003806),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x08003805),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x08003804),  2,  16,  2);
+	println(curvalue);
+
+	print("LICENSE CODE HW >= 2.81 : ");
+	valstr(curvalue, read_flash(0x080000FF),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x080000FE),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x080000FD),  2,  16,  2);
+	print(curvalue);
+	valstr(curvalue, read_flash(0x080000FC),  2,  16,  2);
+	println(curvalue);
+}

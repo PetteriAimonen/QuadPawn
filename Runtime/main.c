@@ -338,7 +338,7 @@ int main(void)
     int status = alterbios_check();
     if (status < 0)
     {
-        char buf[100];
+        char buf[102];
         snprintf(buf, sizeof(buf), "AlterBIOS not found or too old: %d\n"
                  "Please install it from https://github.com/PetteriAimonen/AlterBIOS", status);
         while (1) show_msgbox("AlterBIOS is required", buf);

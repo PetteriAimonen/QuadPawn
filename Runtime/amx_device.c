@@ -47,6 +47,22 @@ static cell AMX_NATIVE_CALL amx_battery_voltage(AMX *amx, const cell *params)
     return __Get(V_BATTERY);
 }
 
+static cell AMX_NATIVE_CALL amx_read_flash(AMX *amx, const cell *params)
+{
+    if ((params[1] >= 0x08000000 ) && (params[1] <= 0x08080000)) {
+    return *(char *)( params[1] );
+    } else {
+        return 0;
+    }
+}
+
+static cell AMX_NATIVE_CALL amx_read_SN(AMX *amx , const cell *params)
+{    
+    return __GetDev_SN();
+}
+
+
+
 int amxinit_device(AMX *amx)
 {
     static const AMX_NATIVE_INFO funcs[] = {
@@ -54,6 +70,8 @@ int amxinit_device(AMX *amx)
         {"set_powersave", amx_set_powersave},
         {"beep", amx_beep},
         {"battery_voltage", amx_battery_voltage},
+        {"read_flash", amx_read_flash},
+        {"read_SN", amx_read_SN},
         {0, 0}
     };
     
