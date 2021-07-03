@@ -20,3 +20,9 @@ native beep(milliseconds = 500, frequency = 400, volume = 80);
 /// Returns the current battery voltage in millivolts.
 /// Full is 4.2V, Empty is 3.5V, but discharge is not linear.
 native battery_voltage();
+
+//Returns the content of the flash at the given address
+native read_flash(int: address);
+
+//Returns the SN
+native read_SN();
